@@ -1,0 +1,90 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String      @id @default(cuid())
+  name        String?
+  email       String      @unique
+  image       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  karmaPoints Int         @default(0)
+  password    String?
+  ranking     String?
+  role        Role        @default(CITIZEN)
+  comments    Comment[]
+  complaints  Complaint[]
+  votes       Vote[]
+}
+
+model Complaint {
+  id              String    @id @default(cuid())
+  title           String
+  description     String
+  category        String
+  latitude        Float
+  longitude       Float
+  address         String?
+  userId          String
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  images          String[]
+  resolutionImage String?
+  severity        Severity  @default(LOW)
+  status          Status    @default(PENDING)
+  comments        Comment[]
+  user            User      @relation(fields: [userId], references: [id])
+  votes           Vote[]
+
+  @@index([status])
+  @@index([userId])
+}
+
+model Vote {
+  id          String    @id @default(cuid())
+  userId      String
+  complaintId String
+  createdAt   DateTime  @default(now())
+  type        String
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, complaintId])
+}
+
+model Comment {
+  id          String    @id @default(cuid())
+  complaintId String
+  userId      String
+  content     String
+  createdAt   DateTime  @default(now())
+  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  user        User      @relation(fields: [userId], references: [id])
+}
+
+enum Role {
+  CITIZEN
+  ADMIN
+}
+
+enum Status {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}
+
+enum Severity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
