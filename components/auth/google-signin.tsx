@@ -6,18 +6,19 @@ import { signIn } from 'next-auth/react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 export function GoogleSignInButton() {
     const [isLoading, setIsLoading] = useState(false);
     const searchParams = useSearchParams();
+    const router = useRouter();
 
     // Get callbackUrl and ensure it's always a relative path
-    const getCallbackPath = () => {
+    const getCallbackPath = (): string => {
         const raw = searchParams.get('callbackUrl') || '/dashboard';
         if (raw.startsWith('http')) {
             try {
-                return new URL(raw).pathname;
+                return new URL(raw).pathname || '/dashboard';
             } catch {
                 return '/dashboard';
             }
@@ -38,22 +39,34 @@ export function GoogleSignInButton() {
                 throw new Error("No Google ID Token found in credential");
             }
 
-            // Use redirect: false to prevent NextAuth from redirecting to internal URL
-            const res = await signIn('credentials', {
-                idToken,
-                redirect: false,
-            });
+            const callbackPath = getCallbackPath();
 
-            if (res?.ok) {
-                // Redirect manually using the browser's actual origin
-                const callbackPath = getCallbackPath();
-                window.location.href = window.location.origin + callbackPath;
-            } else {
-                console.error("Sign-in failed:", res?.error);
+            // Try signIn with redirect: false first
+            try {
+                const res = await signIn('credentials', {
+                    idToken,
+                    redirect: false,
+                });
+
+                if (res?.ok) {
+                    // Redirect using router (works on both local and deployed)
+                    window.location.href = callbackPath;
+                    return;
+                }
+
+                if (res?.error) {
+                    console.error("Sign-in response error:", res.error);
+                }
+            } catch (signInError) {
+                // signIn might throw a URL construction error on some environments
+                // but the session might still be created. Try redirecting anyway.
+                console.warn("signIn threw, attempting redirect anyway:", signInError);
+                window.location.href = callbackPath;
+                return;
             }
 
         } catch (error) {
-            console.error("Auth Error:", error);
+            console.error("Google Auth Error:", error);
         } finally {
             setIsLoading(false);
         }
