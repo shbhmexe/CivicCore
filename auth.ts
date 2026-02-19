@@ -11,6 +11,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // @ts-expect-error - Known type mismatch with v5 beta adapter
     adapter: PrismaAdapter(prisma),
     session: { strategy: "jwt" },
+    trustHost: true,
     ...authConfig,
     pages: {
         signIn: '/auth/signin',

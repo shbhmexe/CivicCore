@@ -33,15 +33,17 @@ export default async function SignInPage(props: { searchParams: Promise<{ callba
                     <form
                         action={async (formData) => {
                             "use server"
+                            const url = await props.searchParams;
+                            const callbackUrl = url.callbackUrl || "/dashboard";
                             try {
-                                await signIn("credentials", formData, "/dashboard")
+                                await signIn("credentials", formData, callbackUrl)
                             } catch (error) {
                                 if (error instanceof AuthError) {
                                     switch (error.type) {
                                         case 'CredentialsSignin':
-                                            redirect('/auth/signin?error=CredentialsSignin')
+                                            redirect(`/auth/signin?error=CredentialsSignin&callbackUrl=${encodeURIComponent(callbackUrl)}`)
                                         default:
-                                            redirect('/auth/signin?error=Default')
+                                            redirect(`/auth/signin?error=Default&callbackUrl=${encodeURIComponent(callbackUrl)}`)
                                     }
                                 }
                                 throw error

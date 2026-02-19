@@ -8,9 +8,12 @@ import { auth } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { useSearchParams } from 'next/navigation';
+
 export function GoogleSignInButton() {
     const [isLoading, setIsLoading] = useState(false);
-    const router = useRouter();
+    const searchParams = useSearchParams();
+    const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
     const handleGoogleSignIn = async () => {
         setIsLoading(true);
@@ -27,10 +30,9 @@ export function GoogleSignInButton() {
             }
 
             // Pass the ID Token to NextAuth Credentials Provider
-            // Setting redirect to true so NextAuth handles the navigation
             await signIn('credentials', {
                 idToken,
-                callbackUrl: '/dashboard',
+                callbackUrl,
                 redirect: true,
             });
 
