@@ -33,8 +33,19 @@ export default async function SignInPage(props: { searchParams: Promise<{ callba
                     <form
                         action={async (formData) => {
                             "use server"
-                            const url = await props.searchParams;
-                            const callbackUrl = url.callbackUrl || "/dashboard";
+                            const urlParams = await props.searchParams;
+                            let callbackUrl = urlParams.callbackUrl || "/dashboard";
+
+                            // Strip domain if absolute URL to prevent redundancy
+                            if (callbackUrl.startsWith('http')) {
+                                try {
+                                    const url = new URL(callbackUrl);
+                                    callbackUrl = url.pathname + url.search;
+                                } catch (e) {
+                                    callbackUrl = "/dashboard";
+                                }
+                            }
+
                             try {
                                 await signIn("credentials", formData, callbackUrl)
                             } catch (error) {

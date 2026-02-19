@@ -3,7 +3,7 @@ import { Server } from "socket.io";
 import next from "next";
 
 const dev = process.env.NODE_ENV !== "production";
-const hostname = "localhost";
+const hostname = dev ? "localhost" : "0.0.0.0";
 const port = parseInt(process.env.PORT || "3000", 10);
 const socketPort = 3001;
 
@@ -13,8 +13,8 @@ const handler = app.getRequestHandler();
 app.prepare().then(() => {
     // --- Next.js HTTP Server ---
     const nextServer = createServer(handler);
-    nextServer.listen(port, () => {
-        console.log(`> Next.js ready on http://${hostname}:${port}`);
+    nextServer.listen(port, hostname, () => {
+        console.log(`> Next.js ready on http://${hostname === '0.0.0.0' ? 'render-host' : hostname}:${port}`);
     });
 
     // --- Socket.IO on separate port to avoid Next.js route conflicts ---
@@ -64,7 +64,7 @@ app.prepare().then(() => {
         });
     });
 
-    ioServer.listen(socketPort, () => {
-        console.log(`> Socket.IO server running on http://${hostname}:${socketPort}`);
+    ioServer.listen(socketPort, hostname, () => {
+        console.log(`> Socket.IO server running on http://${hostname === '0.0.0.0' ? 'render-host' : hostname}:${socketPort}`);
     });
 });

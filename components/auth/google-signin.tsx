@@ -13,7 +13,17 @@ import { useSearchParams } from 'next/navigation';
 export function GoogleSignInButton() {
     const [isLoading, setIsLoading] = useState(false);
     const searchParams = useSearchParams();
-    const callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+    let callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
+
+    // Ensure callbackUrl is a relative path to avoid domain redundancy
+    if (callbackUrl.startsWith('http')) {
+        try {
+            const url = new URL(callbackUrl);
+            callbackUrl = url.pathname + url.search;
+        } catch (e) {
+            callbackUrl = '/dashboard';
+        }
+    }
 
     const handleGoogleSignIn = async () => {
         setIsLoading(true);
