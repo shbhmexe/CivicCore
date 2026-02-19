@@ -125,7 +125,7 @@ export function Navbar() {
                                     )}
                                     <div className="mx-2 my-1 border-t border-white/5" />
                                     <button
-                                        onClick={() => signOut()}
+                                        onClick={() => signOut({ callbackUrl: '/' })}
                                         className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-white/5 transition-colors"
                                     >
                                         Sign Out

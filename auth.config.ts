@@ -9,6 +9,18 @@ export const authConfig = {
         // Added later in auth.ts to avoid edge issues with some providers if needed
     ],
     callbacks: {
+        async redirect({ url, baseUrl }) {
+            // Always convert absolute URLs to relative paths
+            // This prevents NextAuth from redirecting to internal hostname (localhost:10000)
+            if (url.startsWith('/')) return url;
+            try {
+                const urlObj = new URL(url);
+                // If the URL is on the same base, extract just the path
+                return urlObj.pathname + urlObj.search;
+            } catch {
+                return '/dashboard';
+            }
+        },
         async jwt({ token, user, trigger, session }) {
             if (user) {
                 token.id = user.id;

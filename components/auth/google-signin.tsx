@@ -6,24 +6,24 @@ import { signIn } from 'next-auth/react';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-
 import { useSearchParams } from 'next/navigation';
 
 export function GoogleSignInButton() {
     const [isLoading, setIsLoading] = useState(false);
     const searchParams = useSearchParams();
-    let callbackUrl = searchParams.get('callbackUrl') || '/dashboard';
 
-    // Ensure callbackUrl is a relative path to avoid domain redundancy
-    if (callbackUrl.startsWith('http')) {
-        try {
-            const url = new URL(callbackUrl);
-            callbackUrl = url.pathname + url.search;
-        } catch (e) {
-            callbackUrl = '/dashboard';
+    // Get callbackUrl and ensure it's always a relative path
+    const getCallbackPath = () => {
+        const raw = searchParams.get('callbackUrl') || '/dashboard';
+        if (raw.startsWith('http')) {
+            try {
+                return new URL(raw).pathname;
+            } catch {
+                return '/dashboard';
+            }
         }
-    }
+        return raw;
+    };
 
     const handleGoogleSignIn = async () => {
         setIsLoading(true);
@@ -31,7 +31,6 @@ export function GoogleSignInButton() {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
 
-            // Get the Google ID Token from the credential result
             const credential = GoogleAuthProvider.credentialFromResult(result);
             const idToken = credential?.idToken;
 
@@ -39,12 +38,19 @@ export function GoogleSignInButton() {
                 throw new Error("No Google ID Token found in credential");
             }
 
-            // Pass the ID Token to NextAuth Credentials Provider
-            await signIn('credentials', {
+            // Use redirect: false to prevent NextAuth from redirecting to internal URL
+            const res = await signIn('credentials', {
                 idToken,
-                callbackUrl,
-                redirect: true,
+                redirect: false,
             });
+
+            if (res?.ok) {
+                // Redirect manually using the browser's actual origin
+                const callbackPath = getCallbackPath();
+                window.location.href = window.location.origin + callbackPath;
+            } else {
+                console.error("Sign-in failed:", res?.error);
+            }
 
         } catch (error) {
             console.error("Auth Error:", error);
