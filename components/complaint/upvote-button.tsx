@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { ThumbsUp } from 'lucide-react';
 import { toggleVote, getVoteStatus } from '@/app/actions/vote';
-import { io, Socket } from 'socket.io-client';
+import { getSocket } from '@/lib/socket';
 
 interface UpvoteButtonProps {
     complaintId: string;
@@ -15,11 +15,11 @@ export function UpvoteButton({ complaintId, initialVoteCount, initialVoted }: Up
     const [voted, setVoted] = useState(initialVoted);
     const [voteCount, setVoteCount] = useState(initialVoteCount);
     const [isLoading, setIsLoading] = useState(false);
-    const [socket, setSocket] = useState<Socket | null>(null);
+    const [socket, setSocket] = useState<ReturnType<typeof getSocket> | null>(null);
 
     // Connect to Socket.IO and listen for real-time vote updates
     useEffect(() => {
-        const newSocket = io('http://localhost:3001', { transports: ['websocket', 'polling'] });
+        const newSocket = getSocket();
 
         newSocket.on('connect', () => {
             console.log('[Vote] Socket connected');

@@ -5,25 +5,21 @@ import next from "next";
 const dev = process.env.NODE_ENV !== "production";
 const hostname = dev ? "localhost" : "0.0.0.0";
 const port = parseInt(process.env.PORT || "3000", 10);
-const socketPort = 3001;
 
 const app = next({ dev, hostname, port });
 const handler = app.getRequestHandler();
 
 app.prepare().then(() => {
-    // --- Next.js HTTP Server ---
-    const nextServer = createServer(handler);
-    nextServer.listen(port, hostname, () => {
-        console.log(`> Next.js ready on http://${hostname === '0.0.0.0' ? 'render-host' : hostname}:${port}`);
-    });
+    // --- Single HTTP Server for both Next.js and Socket.IO ---
+    const httpServer = createServer(handler);
 
-    // --- Socket.IO on separate port to avoid Next.js route conflicts ---
-    const ioServer = createServer();
-    const io = new Server(ioServer, {
+    const io = new Server(httpServer, {
+        path: "/api/socketio",
         cors: {
             origin: "*",
             methods: ["GET", "POST"],
         },
+        addTrailingSlash: false,
     });
 
     io.on("connection", (socket) => {
@@ -64,7 +60,8 @@ app.prepare().then(() => {
         });
     });
 
-    ioServer.listen(socketPort, hostname, () => {
-        console.log(`> Socket.IO server running on http://${hostname === '0.0.0.0' ? 'render-host' : hostname}:${socketPort}`);
+    httpServer.listen(port, hostname, () => {
+        console.log(`> Server ready on http://${hostname}:${port}`);
+        console.log(`> Socket.IO attached at /api/socketio`);
     });
 });
