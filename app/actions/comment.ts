@@ -54,3 +54,21 @@ export async function getComments(complaintId: string) {
         return { error: "Failed to fetch comments", comments: [] };
     }
 }
+export async function clearComments(complaintId: string) {
+    const session = await auth();
+    if (session?.user?.role !== 'ADMIN') {
+        return { error: 'Unauthorized: Admin access required' };
+    }
+
+    try {
+        await prisma.comment.deleteMany({
+            where: { complaintId }
+        });
+
+        revalidatePath(`/admin/complaints/${complaintId}`);
+        return { success: true };
+    } catch (error) {
+        console.error("Failed to clear comments:", error);
+        return { error: "Failed to clear comments" };
+    }
+}

@@ -1,10 +1,19 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { addComment, getComments } from '@/app/actions/comment';
+import { addComment, getComments, clearComments } from '@/app/actions/comment';
 import { getSocket } from '@/lib/socket';
-import { Send, Shield, User, Loader2 } from 'lucide-react';
+import { Send, Shield, User, Loader2, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toaster';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 interface CommentUser {
     id: string;
@@ -32,6 +41,8 @@ export function CommentSection({ complaintId, currentUserId, currentUserRole }: 
     const [newComment, setNewComment] = useState('');
     const [isSending, setIsSending] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isClearing, setIsClearing] = useState(false);
+    const [showConfirmClear, setShowConfirmClear] = useState(false);
     const chatContainerRef = useRef<HTMLDivElement>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -75,9 +86,14 @@ export function CommentSection({ complaintId, currentUserId, currentUserRole }: 
             });
         });
 
+        socket.on('chat-cleared', () => {
+            setComments([]);
+        });
+
         return () => {
             socket.emit('leave-complaint', complaintId);
             socket.off('comment-received');
+            socket.off('chat-cleared');
             socket.off('connect');
         };
     }, [complaintId]);
@@ -131,13 +147,76 @@ export function CommentSection({ complaintId, currentUserId, currentUserRole }: 
     return (
         <div className="flex flex-col h-[500px] bg-gray-900/40 border border-white/10 rounded-2xl overflow-hidden">
             {/* Header */}
-            <div className="px-5 py-4 border-b border-white/10 bg-black/20">
-                <h3 className="text-base font-bold text-white flex items-center gap-2">
-                    💬 Discussion Thread
-                </h3>
-                <p className="text-xs text-gray-500 mt-0.5">
-                    Real-time chat between admin and citizen
-                </p>
+            <div className="px-5 py-4 border-b border-white/10 bg-black/20 flex items-center justify-between">
+                <div>
+                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        💬 Discussion Thread
+                    </h3>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                        Real-time chat between admin and citizen
+                    </p>
+                </div>
+
+                {currentUserRole === 'ADMIN' && comments.length > 0 && (
+                    <>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowConfirmClear(true)}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-8 px-2 flex items-center gap-1.5 transition-colors"
+                        >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Clear Chat</span>
+                        </Button>
+
+                        <Dialog open={showConfirmClear} onOpenChange={setShowConfirmClear}>
+                            <DialogContent className="glass-card border-white/10 sm:max-w-[400px]">
+                                <DialogHeader>
+                                    <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20">
+                                        <AlertTriangle className="w-6 h-6 text-red-500" />
+                                    </div>
+                                    <DialogTitle className="text-xl text-center text-white">Clear entire chat?</DialogTitle>
+                                    <DialogDescription className="text-center text-gray-400">
+                                        This action will permanently delete all messages in this discussion. This cannot be undone.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogFooter className="flex flex-row gap-2 mt-4">
+                                    <Button
+                                        variant="outline"
+                                        className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10"
+                                        onClick={() => setShowConfirmClear(false)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        className="flex-1 bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-900/20"
+                                        onClick={async () => {
+                                            setIsClearing(true);
+                                            const result = await clearComments(complaintId);
+                                            if (result.success) {
+                                                setComments([]);
+                                                const socket = getSocket();
+                                                socket.emit('clear-chat', { complaintId });
+                                                setShowConfirmClear(false);
+                                                toast("Chat history cleared successfully", "success");
+                                            } else {
+                                                toast("Failed to clear chat", "error");
+                                            }
+                                            setIsClearing(false);
+                                        }}
+                                        disabled={isClearing}
+                                    >
+                                        {isClearing ? (
+                                            <Loader2 className="w-4 h-4 animate-spin text-white" />
+                                        ) : (
+                                            'Confirm Deletion'
+                                        )}
+                                    </Button>
+                                </DialogFooter>
+                            </DialogContent>
+                        </Dialog>
+                    </>
+                )}
             </div>
 
             {/* Messages */}

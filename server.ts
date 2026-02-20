@@ -44,6 +44,11 @@ app.prepare().then(() => {
             console.log(`[Socket.IO] Comment broadcast to complaint-${data.complaintId}`);
         });
 
+        socket.on("clear-chat", (data: { complaintId: string }) => {
+            socket.to(`complaint-${data.complaintId}`).emit("chat-cleared");
+            console.log(`[Socket.IO] Chat cleared for complaint-${data.complaintId}`);
+        });
+
         socket.on("status-update", (data: { complaintId: string; status: string }) => {
             io.emit("complaint-status-changed", data);
             console.log(`[Socket.IO] Status update broadcast for complaint-${data.complaintId}`);

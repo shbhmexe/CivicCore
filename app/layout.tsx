@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   description: "Report issues, earn karma, and build a better city.",
 };
 
+import { Toaster } from "@/components/ui/toaster";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -36,6 +38,7 @@ export default function RootLayout({
             {children}
           </main>
           <Footer />
+          <Toaster />
         </AuthProvider>
       </body>
     </html>
