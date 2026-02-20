@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -16,6 +17,28 @@ const navItems = [
 export function Navbar() {
     const pathname = usePathname();
     const { data: session, status } = useSession();
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+                setDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside as any);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside as any);
+        };
+    }, []);
+
+    // Close dropdown on route change
+    useEffect(() => {
+        setDropdownOpen(false);
+    }, [pathname]);
 
     return (
         <nav className="fixed top-0 left-0 right-0 z-50 flex justify-center p-4">
@@ -90,8 +113,11 @@ export function Navbar() {
                                     {session.user?.role?.toLowerCase() || 'citizen'}
                                 </span>
                             </div>
-                            <div className="group relative">
-                                <button className="flex items-center space-x-1 outline-none">
+                            <div className="group relative" ref={dropdownRef}>
+                                <button
+                                    className="flex items-center space-x-1 outline-none"
+                                    onClick={() => setDropdownOpen(!dropdownOpen)}
+                                >
                                     {session.user?.image ? (
                                         <img
                                             src={session.user.image}
@@ -107,7 +133,12 @@ export function Navbar() {
                                     )}
                                 </button>
 
-                                <div className="absolute right-0 top-full mt-2 w-48 py-2 bg-[#0a0a12]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                                <div className={cn(
+                                    "absolute right-0 top-full mt-2 w-48 py-2 bg-[#0a0a12]/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl transition-all duration-200",
+                                    dropdownOpen
+                                        ? "opacity-100 visible"
+                                        : "opacity-0 invisible md:group-hover:opacity-100 md:group-hover:visible"
+                                )}>
                                     <div className="px-4 py-2 border-b border-white/5 mb-2">
                                         <p className="text-xs text-gray-400 truncate">{session.user?.email}</p>
                                     </div>

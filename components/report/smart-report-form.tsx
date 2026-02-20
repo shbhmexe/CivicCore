@@ -47,25 +47,56 @@ export function SmartReportForm() {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const [locationError, setLocationError] = useState<string | null>(null);
+
     const detectLocation = async () => {
-        if (!navigator.geolocation) return;
+        if (!navigator.geolocation) {
+            setLocationError('Geolocation is not supported by this browser.');
+            return;
+        }
 
         setIsLocating(true);
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                const lat = pos.coords.latitude;
-                const lng = pos.coords.longitude;
-                setLocation({ lat, lng });
-                const addr = await getAddressFromCoords(lat, lng);
-                setAddress(addr);
-                setIsLocating(false);
-            },
-            (error) => {
-                console.error("Geolocation error:", error);
-                setIsLocating(false);
-            },
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
+        setLocationError(null);
+
+        const tryGetPosition = (highAccuracy: boolean, timeout: number): Promise<GeolocationPosition> => {
+            return new Promise((resolve, reject) => {
+                navigator.geolocation.getCurrentPosition(resolve, reject, {
+                    enableHighAccuracy: highAccuracy,
+                    timeout,
+                    maximumAge: 0,
+                });
+            });
+        };
+
+        try {
+            // Try high accuracy first (GPS), then fallback to network-based
+            let pos: GeolocationPosition;
+            try {
+                pos = await tryGetPosition(true, 15000);
+            } catch {
+                // Fallback: try without high accuracy (uses cell towers / Wi-Fi)
+                pos = await tryGetPosition(false, 10000);
+            }
+
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            setLocation({ lat, lng });
+            const addr = await getAddressFromCoords(lat, lng);
+            setAddress(addr);
+        } catch (error: any) {
+            console.error('Geolocation error:', error);
+            if (error?.code === 1) {
+                setLocationError('Location permission denied. Please allow location access in your browser settings.');
+            } else if (error?.code === 2) {
+                setLocationError('Location unavailable. Please check GPS/network settings.');
+            } else if (error?.code === 3) {
+                setLocationError('Location request timed out. Please try again.');
+            } else {
+                setLocationError('Could not detect location. Please try again.');
+            }
+        } finally {
+            setIsLocating(false);
+        }
     };
 
     // Compress image using Canvas for reliable uploads (especially mobile camera photos)
@@ -357,24 +388,25 @@ export function SmartReportForm() {
                     <div className="space-y-2">
                         <div className="flex justify-between items-center">
                             <Label>Detailed Address</Label>
-                            {!location && (
-                                <Button
-                                    type="button"
-                                    variant="link"
-                                    size="sm"
-                                    onClick={detectLocation}
-                                    disabled={isLocating}
-                                    className="text-primary hover:text-primary/80 h-auto p-0 text-xs flex items-center gap-1"
-                                >
-                                    {isLocating ? (
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                    ) : (
-                                        <MapPin className="w-3 h-3" />
-                                    )}
-                                    Detect Location
-                                </Button>
-                            )}
+                            <Button
+                                type="button"
+                                variant="link"
+                                size="sm"
+                                onClick={detectLocation}
+                                disabled={isLocating}
+                                className="text-primary hover:text-primary/80 h-auto p-0 text-xs flex items-center gap-1"
+                            >
+                                {isLocating ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                    <MapPin className="w-3 h-3" />
+                                )}
+                                {location ? 'Re-detect Location' : 'Detect Location'}
+                            </Button>
                         </div>
+                        {locationError && (
+                            <p className="text-xs text-red-400 mt-1">{locationError}</p>
+                        )}
                         <div className="flex gap-2">
                             <MapPin className="w-4 h-4 text-muted-foreground mt-3" />
                             <div className="flex-1 relative">
