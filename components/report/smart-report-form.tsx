@@ -50,33 +50,44 @@ export function SmartReportForm() {
     const [locationError, setLocationError] = useState<string | null>(null);
 
     const detectLocation = async () => {
+        // 1. Check if geolocation API exists
         if (!navigator.geolocation) {
             setLocationError('Geolocation is not supported by this browser.');
             return;
         }
 
+        // 2. Check HTTPS — mobile browsers block geolocation on HTTP
+        const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (!isSecure) {
+            setLocationError('Location requires HTTPS. Please access the site via HTTPS.');
+            return;
+        }
+
+        // 3. Check permission state (if API available)
+        if (navigator.permissions) {
+            try {
+                const permState = await navigator.permissions.query({ name: 'geolocation' });
+                if (permState.state === 'denied') {
+                    setLocationError('Location permission is blocked. Please enable it in your browser Site Settings → Location → Allow.');
+                    return;
+                }
+            } catch {
+                // Permissions API not fully supported, continue anyway
+            }
+        }
+
         setIsLocating(true);
         setLocationError(null);
 
-        const tryGetPosition = (highAccuracy: boolean, timeout: number): Promise<GeolocationPosition> => {
-            return new Promise((resolve, reject) => {
+        try {
+            // On mobile, low accuracy (network/Wi-Fi) is faster and more reliable
+            const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
                 navigator.geolocation.getCurrentPosition(resolve, reject, {
-                    enableHighAccuracy: highAccuracy,
-                    timeout,
-                    maximumAge: 0,
+                    enableHighAccuracy: false,
+                    timeout: 20000,
+                    maximumAge: 60000, // Accept cached location up to 1 minute old
                 });
             });
-        };
-
-        try {
-            // Try high accuracy first (GPS), then fallback to network-based
-            let pos: GeolocationPosition;
-            try {
-                pos = await tryGetPosition(true, 15000);
-            } catch {
-                // Fallback: try without high accuracy (uses cell towers / Wi-Fi)
-                pos = await tryGetPosition(false, 10000);
-            }
 
             const lat = pos.coords.latitude;
             const lng = pos.coords.longitude;
@@ -86,11 +97,11 @@ export function SmartReportForm() {
         } catch (error: any) {
             console.error('Geolocation error:', error);
             if (error?.code === 1) {
-                setLocationError('Location permission denied. Please allow location access in your browser settings.');
+                setLocationError('Location permission denied. Go to browser Settings → Site Settings → Location and allow this site.');
             } else if (error?.code === 2) {
-                setLocationError('Location unavailable. Please check GPS/network settings.');
+                setLocationError('Location unavailable. Turn on GPS/Location Services in your phone settings, then try again.');
             } else if (error?.code === 3) {
-                setLocationError('Location request timed out. Please try again.');
+                setLocationError('Location timed out. Make sure GPS is enabled, or try in an open area.');
             } else {
                 setLocationError('Could not detect location. Please try again.');
             }
