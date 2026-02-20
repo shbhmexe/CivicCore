@@ -34,6 +34,7 @@ export function SmartReportForm() {
     const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
     const [address, setAddress] = useState<string>('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isLocating, setIsLocating] = useState(false);
 
     // Controlled Form State for AI Fields
     const [title, setTitle] = useState('');
@@ -46,6 +47,27 @@ export function SmartReportForm() {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const detectLocation = async () => {
+        if (!navigator.geolocation) return;
+
+        setIsLocating(true);
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const lat = pos.coords.latitude;
+                const lng = pos.coords.longitude;
+                setLocation({ lat, lng });
+                const addr = await getAddressFromCoords(lat, lng);
+                setAddress(addr);
+                setIsLocating(false);
+            },
+            (error) => {
+                console.error("Geolocation error:", error);
+                setIsLocating(false);
+            },
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        );
+    };
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -57,52 +79,52 @@ export function SmartReportForm() {
         setIsAnalyzing(true);
         setAiData(null);
 
-        // 1. EXIF Extraction
+        // 1. EXIF Extraction (Promisified)
+        let locationFound = false;
         try {
-            // @ts-ignore
-            exifr.getData(file, function () {
+            await new Promise((resolve) => {
                 // @ts-ignore
-                const lat = exifr.getTag(this, "GPSLatitude");
-                // @ts-ignore
-                const lng = exifr.getTag(this, "GPSLongitude");
-
-                if (lat && lng) {
+                exifr.getData(file, function () {
                     // @ts-ignore
-                    const latRef = exifr.getTag(this, "GPSLatitudeRef") || "N";
+                    const lat = exifr.getTag(this, "GPSLatitude");
                     // @ts-ignore
-                    const lngRef = exifr.getTag(this, "GPSLongitudeRef") || "E";
+                    const lng = exifr.getTag(this, "GPSLongitude");
 
-                    const convertDMSToDD = (dms: number[], ref: string) => {
-                        let dd = dms[0] + dms[1] / 60 + dms[2] / 3600;
-                        if (ref === "S" || ref === "W") {
-                            dd = dd * -1;
-                        }
-                        return dd;
-                    };
+                    if (lat && lng) {
+                        // @ts-ignore
+                        const latRef = exifr.getTag(this, "GPSLatitudeRef") || "N";
+                        // @ts-ignore
+                        const lngRef = exifr.getTag(this, "GPSLongitudeRef") || "E";
 
-                    const latitude = convertDMSToDD(lat, latRef);
-                    const longitude = convertDMSToDD(lng, lngRef);
+                        const convertDMSToDD = (dms: number[], ref: string) => {
+                            let dd = dms[0] + dms[1] / 60 + dms[2] / 3600;
+                            if (ref === "S" || ref === "W") {
+                                dd = dd * -1;
+                            }
+                            return dd;
+                        };
 
-                    setLocation({ lat: latitude, lng: longitude });
-                    getAddressFromCoords(latitude, longitude).then(setAddress);
-                }
+                        const latitude = convertDMSToDD(lat, latRef);
+                        const longitude = convertDMSToDD(lng, lngRef);
+
+                        setLocation({ lat: latitude, lng: longitude });
+                        locationFound = true;
+                        getAddressFromCoords(latitude, longitude).then(setAddress);
+                    }
+                    resolve(null);
+                });
             });
 
-            // Fallback: Browser Geolocation
-            if (!location) {
-                navigator.geolocation.getCurrentPosition(async (pos) => {
-                    const lat = pos.coords.latitude;
-                    const lng = pos.coords.longitude;
-                    setLocation({ lat, lng });
-                    const addr = await getAddressFromCoords(lat, lng);
-                    setAddress(addr);
-                });
+            // 2. Fallback: Browser Geolocation (Automatic)
+            if (!locationFound) {
+                detectLocation();
             }
         } catch (e) {
             console.error("EXIF Error", e);
+            if (!locationFound) detectLocation();
         }
 
-        // 2. AI Analysis
+        // 3. AI Analysis
         try {
             const formData = new FormData();
             formData.append('image', file);
@@ -278,10 +300,42 @@ export function SmartReportForm() {
                         </div>
                     </div>
                     <div className="space-y-2">
-                        <Label>Detailed Address</Label>
+                        <div className="flex justify-between items-center">
+                            <Label>Detailed Address</Label>
+                            {!location && (
+                                <Button
+                                    type="button"
+                                    variant="link"
+                                    size="sm"
+                                    onClick={detectLocation}
+                                    disabled={isLocating}
+                                    className="text-primary hover:text-primary/80 h-auto p-0 text-xs flex items-center gap-1"
+                                >
+                                    {isLocating ? (
+                                        <Loader2 className="w-3 h-3 animate-spin" />
+                                    ) : (
+                                        <MapPin className="w-3 h-3" />
+                                    )}
+                                    Detect Location
+                                </Button>
+                            )}
+                        </div>
                         <div className="flex gap-2">
                             <MapPin className="w-4 h-4 text-muted-foreground mt-3" />
-                            <Input name="address" value={address} readOnly onChange={(e) => setAddress(e.target.value)} className="bg-white/5" />
+                            <div className="flex-1 relative">
+                                <Input
+                                    name="address"
+                                    value={address}
+                                    readOnly
+                                    className="bg-white/5 pr-8"
+                                    placeholder={isLocating ? "Getting current location..." : "Location will appear here"}
+                                />
+                                {isLocating && (
+                                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                        <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 

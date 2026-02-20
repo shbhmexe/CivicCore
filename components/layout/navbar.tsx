@@ -135,7 +135,7 @@ export function Navbar() {
                         </div>
                     ) : (
                         <Link href="/auth/signin">
-                            <Button variant="glass" size="sm" className="hidden sm:flex">
+                            <Button variant="glass" size="sm">
                                 Log In
                             </Button>
                         </Link>
