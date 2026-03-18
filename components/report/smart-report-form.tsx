@@ -12,6 +12,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import exifr from 'exif-js';
 import { Loader2, MapPin, Upload, Wand2, Brain, Sparkles, Eye, BarChart3, ShieldCheck, AlertCircle, Fingerprint } from 'lucide-react';
 import Image from 'next/image';
+import { VoiceConfirmation } from '@/components/report/voice-confirmation';
+import { useRouter } from 'next/navigation';
 
 // Mock or Real Reverse Geocoding
 async function getAddressFromCoords(lat: number, lng: number) {
@@ -30,6 +32,8 @@ const initialState = {
 
 export function SmartReportForm() {
     const [state, formAction, isPending] = useActionState(createReport, initialState);
+    const router = useRouter();
+    const [submittedData, setSubmittedData] = useState<{ complaintId: string; userName: string; issueTitle: string } | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
     const [address, setAddress] = useState<string>('');
@@ -253,6 +257,48 @@ export function SmartReportForm() {
             default: return 'text-gray-400 bg-gray-400/10 border-gray-400/30';
         }
     };
+
+    // Check if report was submitted successfully — show voice confirmation
+    if (state?.success && state?.complaintId && !submittedData) {
+        setSubmittedData({
+            complaintId: state.complaintId,
+            userName: state.userName || 'Citizen',
+            issueTitle: state.issueTitle || 'Civic Issue'
+        });
+    }
+
+    // ── Show Voice Confirmation Screen ──
+    if (submittedData) {
+        return (
+            <Card className="w-full max-w-2xl mx-auto glass-card">
+                <CardHeader>
+                    <CardTitle className="text-2xl font-bold flex items-center gap-2 text-emerald-400">
+                        ✅ Report Submitted Successfully!
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <p className="text-sm text-muted-foreground">
+                        Your report <strong>&quot;{submittedData.issueTitle}&quot;</strong> has been submitted.
+                        Please confirm it via a quick AI voice call below.
+                    </p>
+                    
+                    <VoiceConfirmation
+                        complaintId={submittedData.complaintId}
+                        userName={submittedData.userName}
+                        issueTitle={submittedData.issueTitle}
+                    />
+
+                    <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => router.push('/dashboard')}
+                    >
+                        Skip & Go to Dashboard
+                    </Button>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card className="w-full max-w-2xl mx-auto glass-card">

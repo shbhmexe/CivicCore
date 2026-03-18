@@ -93,29 +93,22 @@ export async function createReport(prevState: any, formData: FormData) {
             include: { user: true }
         });
 
-        // Trigger confirmation call after 10 seconds
-        // Use the phone number provided in the report, or fallback to the user's profile number
-        const targetPhone = phoneNumber || newComplaint.user.phoneNumber;
-        
-        if (targetPhone) {
-            console.log(`[Action] Scheduling confirmation call for ${newComplaint.user.name} at ${targetPhone} in 10s...`);
-            setTimeout(() => {
-                triggerConfirmationCall(
-                    targetPhone,
-                    newComplaint.user.name || 'Citizen',
-                    newComplaint.title,
-                    newComplaint.id
-                ).catch(err => console.error('[Action] Scheduled call failed:', err));
-            }, 10000);
-        }
+        // Log for debugging
+        console.log(`[Action] Report created: ${newComplaint.id} by ${newComplaint.user.name}`);
+
+        // Return complaintId so client can show voice confirmation
+        revalidatePath('/dashboard');
+        return { 
+            success: true, 
+            complaintId: newComplaint.id,
+            userName: newComplaint.user.name || 'Citizen',
+            issueTitle: newComplaint.title
+        };
 
     } catch (e) {
         console.error("DB Error", e);
         return { error: 'Database error' };
     }
-
-    revalidatePath('/dashboard');
-    redirect('/dashboard');
 }
 
 export async function analyzeImageAction(formData: FormData) {
