@@ -122,3 +122,37 @@ export async function runEscalationCycle() {
         return { success: false, error: 'Failed to process escalation' };
     }
 }
+
+/**
+ * Manually prepares an escalation for a specific complaint.
+ * Finds the authority and return details for preview.
+ */
+export async function prepareEscalation(complaintId: string) {
+    try {
+        const complaint = await (prisma as any).complaint.findUnique({
+            where: { id: complaintId },
+            include: { department: true }
+        });
+
+        if (!complaint) throw new Error('Complaint not found');
+
+        const deptName = complaint.department?.name || 'General Municipal Services';
+        const deptEmail = complaint.department?.email || process.env.SMTP_USER || 'admin@civiccore.app';
+        
+        const authorityDetails = await getAuthorityFromCoordinates(
+            complaint.latitude, 
+            complaint.longitude, 
+            deptName
+        );
+
+        return {
+            success: true,
+            complaint,
+            authorityDetails,
+            deptEmail,
+        };
+    } catch (error: any) {
+        console.error('[ESCALATION] Preparation failed:', error);
+        return { success: false, error: error.message };
+    }
+}

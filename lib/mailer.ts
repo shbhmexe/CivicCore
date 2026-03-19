@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // A professional HTML template for escalating civic issues to local authorities
-const getEscalationEmailTemplate = (
+export const getEscalationEmailTemplate = (
     complaintId: string, 
     title: string, 
     description: string, 

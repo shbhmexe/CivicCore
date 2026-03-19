@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { StatusSelect } from '@/components/admin/status-select';
 import { ResolutionDialog } from '@/components/admin/resolution-dialog';
+import { EscalationDialog } from '@/components/admin/escalation-dialog';
 import Link from 'next/link';
 
 interface ComplaintUser {
@@ -37,6 +38,7 @@ interface Complaint {
     isEscalated: boolean;
     escalatedTo: string | null;
     escalatedAt: string | null;
+    escalationEmailSent: boolean;
     user: ComplaintUser;
 }
 
@@ -219,6 +221,9 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
 
                                     {/* Actions - Clickable */}
                                     <div className="flex items-center gap-2 flex-shrink-0 pointer-events-auto">
+                                        {complaint.status === 'PENDING' && !complaint.isEscalated && (
+                                            <EscalationDialog complaintId={complaint.id} title={complaint.title} />
+                                        )}
                                         {complaint.status !== 'RESOLVED' && complaint.status !== 'REJECTED' && (
                                             <ResolutionDialog complaintId={complaint.id} />
                                         )}

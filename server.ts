@@ -5,11 +5,11 @@ import cron from "node-cron";
 import { runEscalationCycle } from "./lib/escalation";
 
 // Schedule the AI Escalation Bot to run every 1 minute (for testing)
-cron.schedule("* * * * *", async () => {
-    console.log("[CRON] 🤖 Starting scheduled Escalation Bot check...");
-    await runEscalationCycle();
-    console.log("[CRON] ✅ Escalation Bot finished execution.");
-});
+// cron.schedule("* * * * *", async () => {
+//     console.log("[CRON] 🤖 Starting scheduled Escalation Bot check...");
+//     await runEscalationCycle();
+//     console.log("[CRON] ✅ Escalation Bot finished execution.");
+// });
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
