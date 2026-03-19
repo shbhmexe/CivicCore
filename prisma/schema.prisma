@@ -101,6 +101,7 @@ model Complaint {
   totalIgnores       Int       @default(0)
   confidenceScore    Float     @default(0)
   escalationEmailSent Boolean  @default(false)
+  escalationPaused   Boolean  @default(false)
   
   comments           Comment[]
   user               User                @relation(fields: [userId], references: [id])

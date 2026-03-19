@@ -2,11 +2,18 @@ import nodemailer from 'nodemailer';
 
 // Create a transporter using Gmail SMTP
 // Note: This requires an App Password if using 2FA on Gmail
+// Create a transporter using Gmail SMTP with explicit configuration for robustness
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false, // Use TLS (STARTTLS)
     auth: {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS
+    },
+    tls: {
+       // Do not fail on invalid certs (common for local dev)
+       rejectUnauthorized: false
     }
 });
 

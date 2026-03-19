@@ -2,10 +2,11 @@ import prisma from './prisma';
 import { sendEscalationEmail } from './mailer';
 
 /**
- * Uses Groq AI to determine the appropriate local authority based on coordinates.
+ * Uses Groq AI to determine the appropriate local authority and contact email based on coordinates.
  */
-async function getAuthorityFromCoordinates(lat: number, lng: number, departmentName: string): Promise<string> {
-    if (!process.env.GROQ_API_KEY) return `${departmentName} (Local Branch)`;
+async function getAuthorityFromCoordinates(lat: number, lng: number, departmentName: string): Promise<{ authority: string, email: string | null }> {
+    const fallback = { authority: `${departmentName} (Local Branch)`, email: null };
+    if (!process.env.GROQ_API_KEY) return fallback;
 
     try {
         const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
@@ -19,7 +20,7 @@ async function getAuthorityFromCoordinates(lat: number, lng: number, departmentN
                 messages: [
                     {
                         role: 'system',
-                        content: 'You are an Indian civic administration expert. Given coordinates and a department name, return ONLY the full name of the specific authority responsible. For example: "Municipal Corporation of Delhi (MCD) - Roads Division, South Zone". Do not include any conversational text.'
+                        content: 'You are an Indian civic administration expert. Given coordinates and a department name, identify the responsible authority and their official contact email. Return ONLY a JSON object with keys "authority" and "email". Example: {"authority": "Municipal Corporation of Delhi (MCD)", "email": "contact@mcd.nic.in"}. If email is unknown, return null for the email field. Do not include any conversational text.'
                     },
                     {
                         role: 'user',
@@ -27,22 +28,27 @@ async function getAuthorityFromCoordinates(lat: number, lng: number, departmentN
                     }
                 ],
                 temperature: 0.1,
-                max_tokens: 50,
+                max_tokens: 100,
+                response_format: { type: "json_object" }
             }),
         });
 
         if (response.ok) {
             const data = await response.json();
-            const authority = data.choices?.[0]?.message?.content?.trim();
-            if (authority && authority.length > 5) {
-                return authority;
+            const content = data.choices?.[0]?.message?.content;
+            if (content) {
+                const parsed = JSON.parse(content);
+                return {
+                    authority: parsed.authority || fallback.authority,
+                    email: parsed.email || null
+                };
             }
         }
     } catch (e) {
         console.error('[ESCALATION BOT] Groq Authority Lookup failed:', e);
     }
 
-    return `${departmentName} (Local Branch)`;
+    return fallback;
 }
 
 /**
@@ -84,10 +90,12 @@ export async function runEscalationCycle() {
                 const deptEmail = complaint.department?.email || process.env.SMTP_USER || 'admin@civiccore.app';
                 
                 console.log(`[ESCALATION BOT] Determining authority for ${complaint.id}...`);
-                const authorityDetails = await getAuthorityFromCoordinates(complaint.latitude, complaint.longitude, deptName);
+                const { authority, email: aiEmail } = await getAuthorityFromCoordinates(complaint.latitude, complaint.longitude, deptName);
+                
+                const finalEmail = aiEmail || deptEmail;
                 
                 const emailSent = await sendEscalationEmail(
-                    deptEmail,
+                    finalEmail,
                     complaint.id,
                     complaint.title,
                     complaint.description,
@@ -95,7 +103,7 @@ export async function runEscalationCycle() {
                     complaint.latitude,
                     complaint.longitude,
                     complaint.severity,
-                    authorityDetails
+                    authority
                 );
 
                 // Update the complaint record as escalated
@@ -104,12 +112,12 @@ export async function runEscalationCycle() {
                     data: {
                         isEscalated: true,
                         escalationEmailSent: true,
-                        escalatedTo: authorityDetails,
+                        escalatedTo: authority,
                         escalatedAt: new Date()
                     }
                 });
 
-                console.log(`[ESCALATION BOT] Successfully escalated issue: ${complaint.id} to ${authorityDetails}`);
+                console.log(`[ESCALATION BOT] Successfully escalated issue: ${complaint.id} to ${authority}`);
                 successCount++;
             } catch (err) {
                 console.error(`[ESCALATION BOT] Failed to escalate complaint ${complaint.id}:`, err);
@@ -139,7 +147,7 @@ export async function prepareEscalation(complaintId: string) {
         const deptName = complaint.department?.name || 'General Municipal Services';
         const deptEmail = complaint.department?.email || process.env.SMTP_USER || 'admin@civiccore.app';
         
-        const authorityDetails = await getAuthorityFromCoordinates(
+        const { authority, email: aiEmail } = await getAuthorityFromCoordinates(
             complaint.latitude, 
             complaint.longitude, 
             deptName
@@ -148,8 +156,8 @@ export async function prepareEscalation(complaintId: string) {
         return {
             success: true,
             complaint,
-            authorityDetails,
-            deptEmail,
+            authorityDetails: authority,
+            deptEmail: aiEmail || deptEmail,
         };
     } catch (error: any) {
         console.error('[ESCALATION] Preparation failed:', error);

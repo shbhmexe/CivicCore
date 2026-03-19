@@ -13,11 +13,16 @@ import {
     ArrowUpRight,
     Shield,
     Eye,
+    Play,
+    Pause,
 } from 'lucide-react';
 import { StatusSelect } from '@/components/admin/status-select';
 import { ResolutionDialog } from '@/components/admin/resolution-dialog';
 import { EscalationDialog } from '@/components/admin/escalation-dialog';
+import { toggleEscalationPauseAction } from '@/app/actions/escalation';
 import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/components/ui/toaster';
 
 interface ComplaintUser {
     id: string;
@@ -39,6 +44,7 @@ interface Complaint {
     escalatedTo: string | null;
     escalatedAt: string | null;
     escalationEmailSent: boolean;
+    escalationPaused: boolean;
     user: ComplaintUser;
 }
 
@@ -182,7 +188,22 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
                                                         {complaint.severity || 'MEDIUM'}
                                                     </span>
                                                     {complaint.status === 'PENDING' && !complaint.isEscalated && (
-                                                        <EscalationCountdown createdAt={complaint.createdAt} />
+                                                        <div className="flex items-center gap-1.5 pointer-events-auto">
+                                                            <EscalationCountdown createdAt={complaint.createdAt} paused={complaint.escalationPaused} />
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="w-6 h-6 rounded-md hover:bg-white/10 text-gray-400"
+                                                                onClick={async () => {
+                                                                    const res = await toggleEscalationPauseAction(complaint.id, !complaint.escalationPaused);
+                                                                    if (res.success) {
+                                                                        toast(complaint.escalationPaused ? 'Escalation Resumed' : 'Escalation Paused', 'info');
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {complaint.escalationPaused ? <Play className="w-3 h-3" /> : <Pause className="w-3 h-3" />}
+                                                            </Button>
+                                                        </div>
                                                     )}
                                                     {complaint.isEscalated && complaint.escalatedTo && (
                                                         <span className="flex items-center gap-1 text-[10px] text-amber-400/80 italic font-medium">
@@ -271,11 +292,17 @@ function StatCard({ label, value, icon: Icon, gradient, active, onClick }: any) 
     );
 }
 
-function EscalationCountdown({ createdAt }: { createdAt: string }) {
+function EscalationCountdown({ createdAt, paused }: { createdAt: string, paused?: boolean }) {
     const [timeLeft, setTimeLeft] = useState<string>('');
     const [isUrgent, setIsUrgent] = useState(false);
 
     useEffect(() => {
+        if (paused) {
+            setTimeLeft('Escalation Paused');
+            setIsUrgent(false);
+            return;
+        }
+
         const calculateTime = () => {
             const createdDate = new Date(createdAt);
             const now = new Date();
@@ -298,14 +325,15 @@ function EscalationCountdown({ createdAt }: { createdAt: string }) {
         calculateTime();
         const timer = setInterval(calculateTime, 1000);
         return () => clearInterval(timer);
-    }, [createdAt]);
+    }, [createdAt, paused]);
 
     return (
         <span className={cn(
-            "flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border",
+            "flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border transition-colors",
+            paused ? "bg-white/5 text-gray-400 border-white/10 italic" :
             isUrgent ? "bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse font-black" : "bg-white/5 text-gray-400 border-white/10"
         )}>
-            <Clock className={cn("w-2.5 h-2.5", isUrgent && "animate-spin-slow")} />
+            <Clock className={cn("w-2.5 h-2.5", !paused && isUrgent && "animate-spin-slow")} />
             {timeLeft}
         </span>
     );

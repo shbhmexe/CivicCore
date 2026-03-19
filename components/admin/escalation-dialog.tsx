@@ -23,6 +23,7 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
     const [preview, setPreview] = useState<{ authorityDetails: string, html: string, deptEmail: string } | null>(null);
     const [sending, setSending] = useState(false);
     const [editedAuthority, setEditedAuthority] = useState('');
+    const [editedEmail, setEditedEmail] = useState('');
 
     const handleOpenPreview = async () => {
         setLoading(true);
@@ -35,6 +36,7 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
                     deptEmail: result.deptEmail!
                 });
                 setEditedAuthority(result.authorityDetails!);
+                setEditedEmail(result.deptEmail!);
             } else {
                 toast(result.error || 'Failed to load preview', 'error');
                 setOpen(false);
@@ -50,7 +52,7 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
     const handleSend = async () => {
         setSending(true);
         try {
-            const result = await sendManualEscalationAction(complaintId, editedAuthority);
+            const result = await sendManualEscalationAction(complaintId, editedAuthority, editedEmail);
             if (result.success) {
                 toast('Escalation email sent successfully!', 'success');
                 setOpen(false);
@@ -101,19 +103,29 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
                     </div>
                 ) : preview ? (
                     <div className="space-y-6">
-                        <div className="grid gap-4 bg-white/5 p-4 rounded-xl border border-white/10">
-                            <div>
-                                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">Suggested Authority (AI)</label>
-                                <Input 
-                                    value={editedAuthority}
-                                    onChange={(e) => setEditedAuthority(e.target.value)}
-                                    className="bg-white/5 border-white/10 text-white font-semibold text-sm h-10"
-                                />
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">Suggested Authority (AI)</label>
+                                    <Input 
+                                        value={editedAuthority}
+                                        onChange={(e) => setEditedAuthority(e.target.value)}
+                                        className="bg-white/5 border-white/10 text-white font-semibold text-sm h-10"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">Authority Contact Email</label>
+                                    <Input 
+                                        value={editedEmail}
+                                        onChange={(e) => setEditedEmail(e.target.value)}
+                                        className="bg-white/5 border-white/10 text-teal-400 font-mono text-sm h-10"
+                                        placeholder="email@authority.gov.in"
+                                    />
+                                </div>
                             </div>
                             <div className="flex items-center justify-between gap-4">
                                 <div>
-                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">Sending To</label>
-                                    <Badge variant="outline" className="text-teal-400 border-teal-500/20 bg-teal-500/5 font-mono text-[11px] py-1 px-3 mt-1">
+                                    <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Original Dept Routing</label>
+                                    <Badge variant="outline" className="text-gray-500 border-white/10 bg-white/5 font-mono text-[10px] py-0.5 px-2 mt-1">
                                         {preview.deptEmail}
                                     </Badge>
                                 </div>
@@ -122,7 +134,6 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
                                     <span className="text-[10px] font-black text-amber-400 uppercase bg-amber-500/10 px-2 py-1 rounded inline-block mt-1">Draft Ready</span>
                                 </div>
                             </div>
-                        </div>
 
                         <div className="relative group">
                             <div className="absolute -top-3 left-4 px-2 bg-[#0f172a] text-[10px] font-bold text-gray-500 uppercase tracking-widest z-10">Email HTML Preview</div>

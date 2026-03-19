@@ -1,3 +1,5 @@
+'use server';
+
 import { revalidatePath } from 'next/cache';
 import { runEscalationCycle, prepareEscalation } from '@/lib/escalation';
 import { sendEscalationEmail, getEscalationEmailTemplate } from '@/lib/mailer';
@@ -53,19 +55,16 @@ export async function getEscalationPreviewAction(id: string) {
 /**
  * Manually sends an escalation email after admin review.
  */
-export async function sendManualEscalationAction(id: string, authorityDetails: string) {
+export async function sendManualEscalationAction(id: string, authorityDetails: string, targetEmail: string) {
     try {
         const complaint = await prisma.complaint.findUnique({
-            where: { id },
-            include: { department: true }
+            where: { id }
         });
 
         if (!complaint) throw new Error('Complaint not found');
 
-        const deptEmail = complaint.department?.email || process.env.SMTP_USER || 'admin@civiccore.app';
-
         const emailSent = await sendEscalationEmail(
-            deptEmail,
+            targetEmail,
             complaint.id,
             complaint.title,
             complaint.description,
@@ -97,6 +96,26 @@ export async function sendManualEscalationAction(id: string, authorityDetails: s
         return { success: false, error: 'Failed to send email' };
     } catch (error: any) {
         console.error('[ACTION] Manual escalation failed:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Toggles the pause state of an escalation timer.
+ */
+export async function toggleEscalationPauseAction(id: string, paused: boolean) {
+    try {
+        await (prisma as any).complaint.update({
+            where: { id },
+            data: { escalationPaused: paused }
+        });
+        
+        revalidatePath('/admin');
+        revalidatePath('/dashboard');
+        
+        return { success: true };
+    } catch (error: any) {
+        console.error('[ACTION] Toggle pause failed:', error);
         return { success: false, error: error.message };
     }
 }
