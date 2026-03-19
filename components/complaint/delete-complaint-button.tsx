@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Trash2, Loader2, AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { deleteReport } from '@/app/actions/report';
@@ -21,6 +22,7 @@ interface DeleteComplaintButtonProps {
 }
 
 export function DeleteComplaintButton({ complaintId, isOwner }: DeleteComplaintButtonProps) {
+    const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [open, setOpen] = useState(false);
 
@@ -31,6 +33,7 @@ export function DeleteComplaintButton({ complaintId, isOwner }: DeleteComplaintB
             const result = await deleteReport(complaintId);
             if (result.success) {
                 setOpen(false);
+                router.push('/my-reports');
             } else {
                 alert(result.error || "Failed to delete report");
             }
@@ -39,7 +42,7 @@ export function DeleteComplaintButton({ complaintId, isOwner }: DeleteComplaintB
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
+            <DialogTrigger asChild onClick={(e) => e.stopPropagation()}>
                 <Button 
                     variant="ghost" 
                     size="sm" 

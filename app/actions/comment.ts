@@ -28,8 +28,33 @@ export async function addComment(complaintId: string, content: string) {
             }
         });
 
+        const complaint = await prisma.complaint.findUnique({
+            where: { id: complaintId },
+            select: { userId: true, title: true }
+        });
+
+        // Notification for the reporter
+        let notification = null;
+        if (complaint && complaint.userId !== session.user.id) {
+            notification = await (prisma as any).notification.create({
+                data: {
+                    userId: complaint.userId,
+                    type: 'COMMENT',
+                    message: `💬 Someone commented on your report: "${complaint.title}"`,
+                    link: `/complaints/${complaintId}`
+                }
+            });
+        }
+
         revalidatePath(`/admin/complaints/${complaintId}`);
-        return { success: true, comment };
+        revalidatePath(`/complaints/${complaintId}`);
+        
+        return { 
+            success: true, 
+            comment,
+            targetUserId: complaint?.userId,
+            notification 
+        };
     } catch (error) {
         console.error("Failed to add comment:", error);
         return { error: "Failed to add comment" };

@@ -11,6 +11,18 @@ export function getSocket(): Socket {
             path: "/api/socketio",
             transports: ["websocket", "polling"],
         });
+
+        socket.on("connect", () => {
+            console.log("[Socket.IO] Client connected to server:", socket?.id);
+        });
+
+        socket.on("connect_error", (error) => {
+            console.error("[Socket.IO] Connection error:", error.message);
+        });
+
+        socket.on("disconnect", (reason) => {
+            console.log("[Socket.IO] Client disconnected:", reason);
+        });
     }
     return socket;
 }

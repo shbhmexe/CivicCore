@@ -101,6 +101,11 @@ export async function sendEscalationEmail(
     severity: string,
     authorityDetails: string
 ) {
+    if (process.env.DRY_RUN === 'true') {
+        console.log(`[MAILER] [DRY RUN] Would send escalation email to ${toEmail} for complaint ${complaintId}`);
+        return true;
+    }
+
     if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
         console.warn("[MAILER] SMTP_USER or SMTP_PASS not configured. Skipping email send.");
         return false;

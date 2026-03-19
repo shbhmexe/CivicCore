@@ -69,14 +69,19 @@ export function CommentSection({ complaintId, currentUserId, currentUserRole }: 
     useEffect(() => {
         const socket = getSocket();
 
+        const joinRoom = () => {
+            console.log(`[CommentSection] Joining room for complaint: ${complaintId}`);
+            socket.emit('join-complaint', complaintId);
+        };
+
         socket.on('connect', () => {
             console.log('[WebSocket] Connected:', socket.id);
-            socket.emit('join-complaint', complaintId);
+            joinRoom();
         });
 
         // If already connected, join immediately
         if (socket.connected) {
-            socket.emit('join-complaint', complaintId);
+            joinRoom();
         }
 
         socket.on('comment-received', (comment: Comment) => {
@@ -119,6 +124,14 @@ export function CommentSection({ complaintId, currentUserId, currentUserRole }: 
                 complaintId,
                 comment: result.comment,
             });
+
+            // If a notification was created for the reporter, send it over socket
+            if (result.targetUserId && result.notification) {
+                socket.emit('send-notification', {
+                    targetUserId: result.targetUserId,
+                    notification: result.notification
+                });
+            }
         }
         setIsSending(false);
     };

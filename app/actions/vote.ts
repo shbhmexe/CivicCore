@@ -37,6 +37,25 @@ export async function toggleVote(complaintId: string) {
             });
         }
 
+        // Get the reporter to notify them
+        const complaint = await prisma.complaint.findUnique({
+            where: { id: complaintId },
+            select: { userId: true, title: true }
+        });
+
+        // Create notification only if it's a new upvote and not by the owner
+        let notification = null;
+        if (!existingVote && complaint && complaint.userId !== session.user.id) {
+            notification = await (prisma as any).notification.create({
+                data: {
+                    userId: complaint.userId,
+                    type: 'UPVOTE',
+                    message: `👍 Someone upvoted your report: "${complaint.title}"`,
+                    link: `/complaints/${complaintId}`
+                }
+            });
+        }
+
         // Get updated vote count
         const voteCount = await prisma.vote.count({
             where: { complaintId },
@@ -48,6 +67,8 @@ export async function toggleVote(complaintId: string) {
             success: true,
             voted: !existingVote,
             voteCount,
+            targetUserId: complaint?.userId,
+            notification
         };
     } catch (error) {
         console.error("Vote error:", error);

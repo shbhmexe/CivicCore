@@ -44,7 +44,7 @@ export function ResolutionDialog({ complaintId }: { complaintId: string }) {
 
         setLoading(false);
 
-        if (result?.success) {
+        if (result && 'success' in result && result.success) {
             setOpen(false);
             clearFile();
             router.refresh();

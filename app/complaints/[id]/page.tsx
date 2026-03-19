@@ -165,17 +165,16 @@ export default async function ComplaintDetailPage({ params }: { params: Promise<
                     {/* Left Column: Progress & Details */}
                     <div className="lg:col-span-2 space-y-8">
                         
-                        {/* Progress Tracker Card (Citizen only) */}
-                        {!isAdmin && (
-                            <div className="bg-white rounded-[2rem] shadow-xl shadow-blue-900/5 border border-gray-100 overflow-hidden">
-                                <ProgressTracker 
-                                    status={complaint.status} 
-                                    createdAt={complaint.createdAt}
-                                    resolvedAt={complaint.resolvedAt}
-                                    isEscalated={(complaint as any).isEscalated}
-                                />
-                            </div>
-                        )}
+                        {/* Progress Tracker Card */}
+                        <div className="bg-white rounded-[2rem] shadow-xl shadow-blue-900/5 border border-gray-100 overflow-hidden">
+                            <ProgressTracker 
+                                complaintId={complaint.id}
+                                status={complaint.status} 
+                                createdAt={complaint.createdAt}
+                                resolvedAt={complaint.resolvedAt}
+                                isEscalated={(complaint as any).isEscalated}
+                            />
+                        </div>
 
                         {/* Description Card */}
                         <div className="bg-white rounded-[2rem] shadow-xl shadow-blue-900/5 border border-gray-100 p-8">

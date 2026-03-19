@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { LayoutDashboard, PlusCircle, Home, ClipboardList, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession, signOut } from 'next-auth/react';
+import { NotificationBell } from './notification-bell';
 
 const citizenNavItems = [
     { name: 'Home', href: '/', icon: Home },
@@ -87,13 +88,7 @@ export function Navbar() {
                 <div className="flex items-center gap-3 ml-auto">
                     {status === 'authenticated' ? (
                         <>
-                            <button className="relative text-orange-400 hover:text-orange-300 transition-colors hidden sm:block">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                                </svg>
-                                <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-orange-500 rounded-full border-2 border-[#002f5a]"></span>
-                            </button>
+                            <NotificationBell userId={session.user.id} />
 
                             <div className="flex-col items-end hidden lg:flex">
                                 <span className="text-xs font-semibold text-white">

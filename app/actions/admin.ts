@@ -11,13 +11,37 @@ export async function updateComplaintStatus(complaintId: string, status: any) {
     }
 
     try {
-        await prisma.complaint.update({
+        const updateData: any = { status };
+        if (status === 'RESOLVED') {
+            updateData.resolvedAt = new Date();
+        }
+
+        const complaint = await prisma.complaint.update({
             where: { id: complaintId },
-            data: { status }
+            data: updateData,
+            include: { user: { select: { id: true, name: true } } }
+        });
+
+        // Create notification for the user
+        const notification = await (prisma as any).notification.create({
+            data: {
+                userId: complaint.userId,
+                type: 'STATUS_CHANGE',
+                message: `📢 Your report "${complaint.title}" status has been updated to ${status.replace('_', ' ')}.`,
+                link: `/complaints/${complaintId}`
+            }
         });
 
         revalidatePath('/admin');
-        return { success: true };
+        revalidatePath(`/complaints/${complaintId}`);
+        revalidatePath('/my-reports');
+        
+        return { 
+            success: true, 
+            complaint, 
+            notification,
+            targetUserId: complaint.userId 
+        };
     } catch (error) {
         console.error("Failed to update status:", error);
         return { error: "Failed to update status" };

@@ -1,4 +1,9 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { CheckCircle2, Clock, User, Wrench, Flag, XCircle, AlertTriangle } from 'lucide-react';
+import { getSocket } from '@/lib/socket';
 
 const STEPS = [
   { key: 'PENDING',     label: 'Report Filed',     icon: Clock,        description: 'Your report has been submitted and is awaiting review.' },
@@ -13,9 +18,66 @@ function getStepIndex(status: string): number {
   return idx === -1 ? 0 : idx;
 }
 
-export function ProgressTracker({ status, createdAt, resolvedAt, isEscalated }: { status: string; createdAt: Date; resolvedAt?: Date | null; isEscalated?: boolean }) {
-  const currentIndex = getStepIndex(status);
-  const isRejected = status === 'REJECTED';
+export function ProgressTracker({ 
+    complaintId,
+    status: initialStatus, 
+    createdAt, 
+    resolvedAt: initialResolvedAt, 
+    isEscalated: initialIsEscalated 
+}: { 
+    complaintId: string;
+    status: string; 
+    createdAt: Date; 
+    resolvedAt?: Date | null; 
+    isEscalated?: boolean 
+}) {
+  const [currentStatus, setCurrentStatus] = useState(initialStatus);
+  const [resolvedAt, setResolvedAt] = useState(initialResolvedAt);
+  const [isEscalated, setIsEscalated] = useState(initialIsEscalated);
+  const router = useRouter();
+
+  // Sync with props when page refreshes via router.refresh()
+  useEffect(() => {
+    setCurrentStatus(initialStatus);
+    setResolvedAt(initialResolvedAt);
+    setIsEscalated(initialIsEscalated);
+  }, [initialStatus, initialResolvedAt, initialIsEscalated]);
+
+  const currentIndex = getStepIndex(currentStatus);
+  const isRejected = currentStatus === 'REJECTED';
+
+  useEffect(() => {
+    const socket = getSocket();
+
+    const joinRoom = () => {
+        console.log(`[ProgressTracker] Joining room for complaint: ${complaintId}`);
+        socket.emit('join-complaint', complaintId);
+    };
+
+    if (socket.connected) {
+        joinRoom();
+    }
+    socket.on('connect', joinRoom);
+
+    const handleStatusUpdate = (data: { complaintId: string; status: string; resolvedAt?: Date }) => {
+        if (data.complaintId === complaintId) {
+            console.log("[ProgressTracker] Status update received:", data.status);
+            setCurrentStatus(data.status);
+            if (data.resolvedAt) setResolvedAt(new Date(data.resolvedAt));
+            
+            // Refresh server components (Hero status, etc.)
+            router.refresh();
+        }
+    };
+
+    socket.on('status-update', handleStatusUpdate);
+
+    return () => {
+        socket.off('connect', joinRoom);
+        socket.off('status-update', handleStatusUpdate);
+    };
+  }, [complaintId]);
+
 
   if (isRejected) {
     return (

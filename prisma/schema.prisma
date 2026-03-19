@@ -23,6 +23,7 @@ model User {
   complaints  Complaint[]
   votes       Vote[]
   redemptions Redemption[]
+  notifications Notification[]
 }
 
 model Redemption {
@@ -154,4 +155,17 @@ enum Severity {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  type        String   // "STATUS_CHANGE", "UPVOTE", "COMMENT"
+  message     String
+  link        String?  // e.g. "/complaints/[id]"
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }

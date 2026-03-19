@@ -19,25 +19,34 @@ export function UpvoteButton({ complaintId, initialVoteCount, initialVoted }: Up
 
     // Connect to Socket.IO and listen for real-time vote updates
     useEffect(() => {
-        const newSocket = getSocket();
+        const socket = getSocket();
 
-        newSocket.on('connect', () => {
-            console.log('[Vote] Socket connected');
-            newSocket.emit('join-complaint', complaintId);
-        });
+        const joinRoom = () => {
+            console.log(`[Vote] Joining room for complaint: ${complaintId}`);
+            socket.emit('join-complaint', complaintId);
+        };
 
-        // Listen for vote updates from other users
-        newSocket.on('vote-updated', (data: { complaintId: string; voteCount: number }) => {
+        if (socket.connected) {
+            joinRoom();
+        }
+
+        socket.on('connect', joinRoom);
+
+        const handleUpdate = (data: { complaintId: string; voteCount: number }) => {
             if (data.complaintId === complaintId) {
+                console.log("[Vote] Update received:", data.voteCount);
                 setVoteCount(data.voteCount);
             }
-        });
+        };
 
-        setSocket(newSocket);
+        socket.on('vote-updated', handleUpdate);
+
+        setSocket(socket);
 
         return () => {
-            newSocket.emit('leave-complaint', complaintId);
-            newSocket.disconnect();
+            socket.off('connect', joinRoom);
+            socket.off('vote-updated', handleUpdate);
+            // DO NOT DISCONNECT shared socket
         };
     }, [complaintId]);
 
@@ -81,6 +90,13 @@ export function UpvoteButton({ complaintId, initialVoteCount, initialVoted }: Up
                     complaintId,
                     voteCount: result.voteCount,
                 });
+                // If it was a new upvote (not a toggle off), notify the reporter
+                if (result.voted && result.targetUserId && result.notification) {
+                    socket.emit('send-notification', {
+                        targetUserId: result.targetUserId,
+                        notification: result.notification
+                    });
+                }
                 
                 // If the vote reached a milestone, trigger global activity broadcast
                 if (result.voteCount === 10 || result.voteCount === 50) {

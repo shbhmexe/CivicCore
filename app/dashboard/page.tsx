@@ -24,6 +24,7 @@ export default async function DashboardPage() {
         orderBy: { createdAt: 'desc' },
         include: {
             department: true,
+            user: { select: { name: true } },
             votes: true,
             _count: {
                 select: { comments: true }

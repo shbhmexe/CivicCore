@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { updateComplaintStatus } from '@/app/actions/admin';
 import { cn } from '@/lib/utils';
 import { ChevronDown, Loader2, Check } from 'lucide-react';
+import { getSocket } from '@/lib/socket';
 
 const STATUS_OPTIONS = [
     { label: 'Pending', value: 'PENDING', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
@@ -18,6 +19,11 @@ export function StatusSelect({ complaintId, currentStatus }: { complaintId: stri
     const [status, setStatus] = useState(currentStatus);
     const [open, setOpen] = useState(false);
     const ref = useRef<HTMLDivElement>(null);
+
+    // Sync with props when page refreshes via router.refresh()
+    useEffect(() => {
+        setStatus(currentStatus);
+    }, [currentStatus]);
 
     useEffect(() => {
         const handleClick = (e: MouseEvent) => {
@@ -34,8 +40,27 @@ export function StatusSelect({ complaintId, currentStatus }: { complaintId: stri
         setLoading(true);
         setOpen(false);
         const result = await updateComplaintStatus(complaintId, newStatus);
+        
         if (result.success) {
             setStatus(newStatus);
+            
+            // Broadcast via WebSocket
+            const socket = getSocket();
+            
+            // 1. Update the timeline/progress tracker for anyone viewing this report
+            socket.emit('status-update', { 
+                complaintId, 
+                status: newStatus,
+                resolvedAt: (result.complaint as any)?.resolvedAt 
+            });
+
+            // 2. Send private notification to the user
+            if (result.targetUserId && result.notification) {
+                socket.emit('send-notification', {
+                    targetUserId: result.targetUserId,
+                    notification: result.notification
+                });
+            }
         }
         setLoading(false);
     };

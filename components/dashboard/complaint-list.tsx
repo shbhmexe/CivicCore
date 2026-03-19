@@ -41,9 +41,17 @@ export function ComplaintList({ complaints, userId }: { complaints: any[]; userI
                         <CardHeader className="pb-2">
                             <div className="flex justify-between items-start">
                                 <StatusBadge status={complaint.status} />
-                                <span className="text-xs text-muted-foreground">
-                                    {new Date(complaint.createdAt).toLocaleDateString()}
-                                </span>
+                                <div className="flex flex-col items-end gap-1">
+                                    <span className="text-xs text-muted-foreground">
+                                        {new Date(complaint.createdAt).toLocaleDateString()}
+                                    </span>
+                                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-teal-400 uppercase tracking-tight">
+                                        <div className="w-4 h-4 rounded-full bg-teal-500/20 flex items-center justify-center text-[8px] border border-teal-500/30">
+                                            {(complaint.user?.name || '?').charAt(0)}
+                                        </div>
+                                        {complaint.user?.name || 'Anonymous'}
+                                    </div>
+                                </div>
                             </div>
                             <CardTitle className="text-lg mt-2 truncate group-hover:text-teal-400 transition-colors">{complaint.title}</CardTitle>
                             <CardDescription className="line-clamp-2">{complaint.description}</CardDescription>

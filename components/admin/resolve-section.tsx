@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { resolveComplaintAction } from '@/app/actions/report';
 import { Button } from '@/components/ui/button';
 import { Upload, CheckCircle2, Loader2, ImageIcon, X } from 'lucide-react';
-import { io } from 'socket.io-client';
+import { getSocket } from '@/lib/socket';
 
 interface ResolveSectionProps {
     complaintId: string;
@@ -20,6 +20,11 @@ export function ResolveSection({ complaintId, currentStatus, existingResolutionI
     const [resolved, setResolved] = useState(currentStatus === 'RESOLVED');
     const [resolutionImage, setResolutionImage] = useState<string | null>(existingResolutionImage);
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Sync with props when page refreshes via router.refresh()
+    useEffect(() => {
+        setResolved(currentStatus === 'RESOLVED');
+    }, [currentStatus]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = e.target.files?.[0];
@@ -52,17 +57,30 @@ export function ResolveSection({ complaintId, currentStatus, existingResolutionI
         formData.append('complaintId', complaintId);
         formData.append('resolutionImage', file);
 
-        const result = await resolveComplaintAction(formData);
+        const result = await resolveComplaintAction(formData) as any;
 
-        if (result.error) {
+        if (result?.error) {
             setError(result.error);
-        } else {
+        } else if (result?.success) {
             setResolved(true);
             setResolutionImage(preview);
             
-            // Broadcast new activity
-            const socket = io({ path: '/api/socketio' });
+            // Broadcast status change
+            const socket = getSocket();
+            socket.emit('status-update', { 
+                complaintId, 
+                status: 'RESOLVED',
+                resolvedAt: new Date()
+            });
             socket.emit('new-activity');
+
+            // Notify the reporter if a notification was created
+            if (result.targetUserId && result.notification) {
+                socket.emit('send-notification', {
+                    targetUserId: result.targetUserId,
+                    notification: result.notification
+                });
+            }
         }
         setIsResolving(false);
     };

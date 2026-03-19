@@ -316,13 +316,13 @@ export async function upvoteComplaint(complaintId: string) {
     const userId = session.user.id;
 
     try {
-        await prisma.$transaction(async (tx) => {
+        return await prisma.$transaction(async (tx) => {
             // Check if already voted
             const existingVote = await tx.vote.findUnique({
                 where: { userId_complaintId: { userId, complaintId } }
             });
 
-            if (existingVote) return; // Already voted
+            if (existingVote) return { error: 'Already upvoted' };
 
             // Create Vote
             await tx.vote.create({
@@ -330,7 +330,6 @@ export async function upvoteComplaint(complaintId: string) {
             });
 
             // Increment User Karma (The Reporter, not the Voter)
-            // Cap at 50 points per issue? Logic:
             const complaint = await tx.complaint.findUnique({
                 where: { id: complaintId },
                 select: { userId: true, title: true, votes: { select: { id: true } } }
@@ -351,10 +350,28 @@ export async function upvoteComplaint(complaintId: string) {
                     complaintId
                 );
             }
-        });
 
-        revalidatePath('/dashboard');
-        return { success: true };
+            // Notification for the reporter
+            let notification = null;
+            if (complaint && complaint.userId !== userId) {
+                notification = await tx.notification.create({
+                    data: {
+                        userId: complaint.userId,
+                        type: 'UPVOTE',
+                        message: `👍 Someone upvoted your report: "${complaint.title}"`,
+                        link: `/complaints/${complaintId}`
+                    }
+                });
+            }
+
+            revalidatePath('/dashboard');
+            
+            return { 
+                success: true, 
+                targetUserId: complaint?.userId,
+                notification 
+            };
+        });
     } catch (e) {
         console.error("Vote Error", e);
         return { error: "Failed to vote" };
@@ -444,16 +461,26 @@ export async function resolveComplaintAction(formData: FormData) {
                 complaint.userId
             );
 
-            // Send Email (Resend) - Mocked for hackathon if no key
-            // console.log("Sending email to user...");
+            // Notification for the reporter
+            const notification = await (tx as any).notification.create({
+                data: {
+                    userId: complaint.userId,
+                    type: 'STATUS_CHANGE',
+                    message: `✅ Your report "${complaint.title}" has been RESOLVED! Thank you for your contribution.`,
+                    link: `/complaints/${complaintId}`
+                }
+            });
+
+            return { 
+                success: true, 
+                targetUserId: complaint.userId,
+                notification 
+            };
         });
     } catch (e) {
+        console.error("Resolution Error", e);
         return { error: 'Resolution failed' };
     }
-
-    revalidatePath('/admin');
-    revalidatePath('/dashboard');
-    return { success: true };
 }
 
 /**

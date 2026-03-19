@@ -41,7 +41,9 @@ app.prepare().then(() => {
 
         socket.on("join-complaint", (complaintId: string) => {
             socket.join(`complaint-${complaintId}`);
-            console.log(`[Socket.IO] ${socket.id} joined complaint-${complaintId}`);
+            console.log(`[Socket.IO] ${socket.id} JOINED complaint-${complaintId}`);
+            // Verify rooms
+            console.log(`[Socket.IO] Current rooms for ${socket.id}:`, Array.from(socket.rooms));
         });
 
         socket.on("leave-complaint", (complaintId: string) => {
@@ -59,13 +61,15 @@ app.prepare().then(() => {
             console.log(`[Socket.IO] Chat cleared for complaint-${data.complaintId}`);
         });
 
-        socket.on("status-update", (data: { complaintId: string; status: string }) => {
-            io.emit("complaint-status-changed", data);
-            console.log(`[Socket.IO] Status update broadcast for complaint-${data.complaintId}`);
+        socket.on("status-update", (data: { complaintId: string; status: string; resolvedAt?: any }) => {
+            // Broadcast to everyone in the complaint room
+            io.to(`complaint-${data.complaintId}`).emit("status-update", data);
+            console.log(`[Socket.IO] Status update broadcast for complaint-${data.complaintId}: ${data.status}`);
         });
 
         socket.on("vote-change", (data: { complaintId: string; voteCount: number }) => {
-            socket.to(`complaint-${data.complaintId}`).emit("vote-updated", data);
+            // Broadcast globally so even dashboard cards (not in a specific room) can update
+            io.emit("vote-updated", data);
             console.log(`[Socket.IO] Vote update broadcast for complaint-${data.complaintId}: ${data.voteCount} votes`);
         });
 
@@ -82,6 +86,18 @@ app.prepare().then(() => {
             // The clients will calculate their own distance to decide whether to show the popup
             socket.broadcast.emit("broadcast-nearby-verification", data);
             console.log(`[Socket.IO] Broadcasted verification request for issue: ${data.complaintId} at [${data.latitude}, ${data.longitude}]`);
+        });
+
+        socket.on("join-user", (userId: string) => {
+            socket.join(`user-${userId}`);
+            console.log(`[Socket.IO] ${socket.id} JOINED user-${userId}`);
+            console.log(`[Socket.IO] Current rooms for ${socket.id}:`, Array.from(socket.rooms));
+        });
+
+        socket.on("send-notification", (data: { targetUserId: string; notification: any }) => {
+            console.log(`[Socket.IO] Attempting to send notification to user-${data.targetUserId}`);
+            io.to(`user-${data.targetUserId}`).emit("notification-received", data.notification);
+            console.log(`[Socket.IO] Notification emitted to user-${data.targetUserId}`);
         });
 
         socket.on("disconnect", () => {
