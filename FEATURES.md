@@ -22,7 +22,7 @@ CivicCore is an advanced AI-native infrastructure for digital governance. This d
 ---
 
 ## 🛰️ 2. Geographic Intelligence & Proximity Logic
-*Using spatial awareness to ensure data accuracy.*
+*Using spatial awareness and real-time syncing.*
 
 ### **Deduplication Engine (Auto-Merge)**
 *   **Haversine Algorithm**: When a user reports an issue, the system queries all active reports within a 50-meter radius.
@@ -35,26 +35,40 @@ CivicCore is an advanced AI-native infrastructure for digital governance. This d
 *   **Broadcasting**: Coordinates are broadcasted globally.
 *   **Client Filtering**: The frontend calculates real-time distance using the browser's Geolocation API. If a user is within 100m, they get a "Nearby Verification Request" modal.
 
+### **Real-Time Global Sync (Upvotes & Counts)**
+*   **Event-Driven UI**: Upvote counts on the dashboard cards and detail pages are synchronized globally via Socket.IO.
+*   **Optimistic UI**: Immediate local updates followed by server-broadcasted confirmation to ensure no "lost" votes in a racing environment.
+
 ---
 
-## 🏢 3. Administrative Governance & Escalation
-*Holding authorities accountable through automation.*
+## 🏗️ 3. Administrative Governance & Resolution
+*Holding authorities accountable through proof-based closure.*
 
 ### **Departmental Routing**
 *   **Mapping**: Pothole -> Roads, Garbage -> Sanitation, etc.
 *   **Access Control**: Each department can be isolated, but the **Super Admin** sees a holistic "City Pulse" dashboard.
 
-### **The AI Escalation Bot**
-*   **Cron Job**: A `node-cron` worker triggers every 6 hours.
-*   **Authority Discovery (Groq AI)**:
-    *   **Input**: Latitude, Longitude, Department.
-    *   **AI reasoning**: *"Based on these coordinates in Gurgaon, which specific MCD office handles sanitation?"*
-    *   **Output**: Returns the precise local authority name.
-*   **Email Dispatch**: Generates a high-urgency HTML email via **Nodemailer** with a Google Maps deep-link pinned to the issue.
+### **Proof-of-Resolution (AI Comparison)**
+*   **Before/After Scoring**: When an admin marks an issue as "RESOLVED", they must upload a proof photo.
+*   **AI Inference**: The system uses CLIP embeddings to compare the quality and context of the resolution image against the original report image.
+*   **Metric**: Displays a "Resolution Confidence Score" to citizens, ensuring the state of "Reality" matches the reported fix.
 
 ---
 
-## 📞 4. Voice & Multimedia Integrations
+## 🔔 4. Real-Time Notification & Identity Layer
+*The nervous system of the CivicCore community.*
+
+### **Targeted Notifications**
+*   **Logic**: Every user exists in a unique Socket.IO room (`user-${userId}`).
+*   **Triggers**: Upvotes, Admin Status Updates, and Comments fire events directly to the specific user.
+*   **Notification Bell**: A persistent client component with sound patterns and "Ignore All" functionality for high-volume active citizens.
+
+### **Community Transparency**
+*   **Submitter Identity**: Every report card now displays "Submitted by: [Name]" with profile initial identifiers. This humanizes the data and highlights active community contributors.
+
+---
+
+## 📞 5. Voice & Multimedia Integrations
 *Multimodal evidence for undeniable proof.*
 
 ### **Retell AI Confirmation Calls**
@@ -68,21 +82,22 @@ CivicCore is an advanced AI-native infrastructure for digital governance. This d
 
 ---
 
-## 🏆 5. Gamification & Community Economy
+## 🏆 6. Gamification & Community Economy
 *Building a self-sustaining ecosystem of civic duty.*
 
 ### **Karma Points Algorithm**
 *   **Report Creation**: +10 Points.
-*   **Community Upvote**: +2 Points per vote.
+*   **Community Upvote Milestone**: Bonus points when an issue reaches 10 or 50 upvotes.
 *   **Issue Verification (Nearby)**: +5 Points.
 *   **Successful Resolution**: +25 Points.
 
-### **Redemption Store**
-*   Modelled via `Redemption` schema. Citizens can exchange points for "Civic Vouchers" (e.g., Property Tax discounts, local shop coupons).
+### **Real-Time Timeline (Progress Bar)**
+*   **Flipkart-Style Tracker**: A multi-step status bar (`PENDING` -> `ASSIGNED` -> `IN_PROGRESS` -> `RESOLVED/REJECTED`).
+*   **Web-Socket Refreshes**: The timeline updates in real-time for both citizen and admin views as soon as status is flipped.
 
 ---
 
-## 🎨 6. Design System & UX Philosophy
+## 🎨 7. Design System & UX Philosophy
 *Premium Glassmorphism for a "Future City" feel.*
 
 *   **Color Palette**: Deep Slate (#0f172a) backgrounds with Vibrant Teal/Emerald gradients.
@@ -91,12 +106,12 @@ CivicCore is an advanced AI-native infrastructure for digital governance. This d
 
 ---
 
-## 🛠️ 7. Technical Stack Deep-Dive
+## 🛠️ 8. Technical Stack Deep-Dive
 *   **Framework**: Next.js 15 (App Router, Server Actions).
 *   **ORM**: Prisma (Type-safe database interactions).
 *   **Database**: PostgreSQL (Neon Serverless).
 *   **Auth**: NextAuth.js (Github/Google/Credentials).
-*   **Real-Time**: Socket.IO (Custom Express-style HTTP server).
+*   **Real-Time**: Socket.IO (Singleton pattern for reconnection resilience).
 *   **AI Inference**: HuggingFace Inference API, Groq Cloud API.
 *   **Cloud Infrastructure**: Cloudinary (Image/Video), Resend/Nodemailer (Email).
 

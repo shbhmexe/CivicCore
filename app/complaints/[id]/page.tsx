@@ -12,7 +12,6 @@ import { StatusSelect } from '@/components/admin/status-select';
 import { UpvoteButton } from '@/components/complaint/upvote-button';
 import { ProgressTracker } from '@/components/complaint/progress-tracker';
 import { cn } from '@/lib/utils';
-import { checkAndEscalate } from '@/app/actions/escalation';
 
 const severityConfig: Record<string, { color: string; bg: string; border: string }> = {
     LOW: { color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/20' },
@@ -36,9 +35,6 @@ export default async function ComplaintDetailPage({ params }: { params: Promise<
     if (!session?.user) {
         redirect('/auth/signin');
     }
-
-    // Trigger escalation check
-    await checkAndEscalate();
 
     const complaint = await prisma.complaint.findUnique({
         where: { id },

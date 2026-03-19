@@ -4,9 +4,8 @@ import next from "next";
 import cron from "node-cron";
 import { runEscalationCycle } from "./lib/escalation";
 
-// Schedule the AI Escalation Bot to run every 6 hours
-// It will find complaints older than 10 days, look up the authority, and send emails.
-cron.schedule("0 */6 * * *", async () => {
+// Schedule the AI Escalation Bot to run every 1 minute (for testing)
+cron.schedule("* * * * *", async () => {
     console.log("[CRON] 🤖 Starting scheduled Escalation Bot check...");
     await runEscalationCycle();
     console.log("[CRON] ✅ Escalation Bot finished execution.");

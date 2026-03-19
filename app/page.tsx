@@ -43,13 +43,26 @@ export default function Home() {
               <span className="hidden sm:inline force-white" style={{ color: '#ffffff' }}>CivicCore</span>
             </h1>
             <nav className="hidden md:flex items-center gap-6 text-[13px] font-medium tracking-wide">
-              <Link href="/" className="relative text-white flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-300"></span>
-                Home
-              </Link>
-                <Link href="/report" className="text-blue-200 hover:text-white transition-colors" style={{ color: '#bfdbfe' }}>Report issue</Link>
-                <Link href="/my-reports" className="text-blue-200 hover:text-white transition-colors" style={{ color: '#bfdbfe' }}>My Reports</Link>
-                <Link href="/dashboard" className="text-blue-200 hover:text-white transition-colors" style={{ color: '#bfdbfe' }}>Dashboard</Link>
+              {session?.user?.role === 'ADMIN' ? (
+                <>
+                  <Link href="/" className="relative text-white flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-300"></span>
+                    Home
+                  </Link>
+                  <Link href="/admin" className="text-blue-200 hover:text-white transition-colors" style={{ color: '#bfdbfe' }}>Admin Hub</Link>
+                  <Link href="/feed" className="text-blue-200 hover:text-white transition-colors" style={{ color: '#bfdbfe' }}>Global Feed</Link>
+                </>
+              ) : (
+                <>
+                  <Link href="/" className="relative text-white flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-300"></span>
+                    Home
+                  </Link>
+                  <Link href="/report" className="text-blue-200 hover:text-white transition-colors" style={{ color: '#bfdbfe' }}>Report issue</Link>
+                  <Link href="/my-reports" className="text-blue-200 hover:text-white transition-colors" style={{ color: '#bfdbfe' }}>My Reports</Link>
+                  <Link href="/dashboard" className="text-blue-200 hover:text-white transition-colors" style={{ color: '#bfdbfe' }}>Dashboard</Link>
+                </>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3 pr-6">
@@ -100,6 +113,11 @@ export default function Home() {
                     <Link href="/profile" className="block w-full text-left px-4 py-2 text-sm text-[#1e293b] hover:bg-gray-50 transition-colors">
                       My Profile
                     </Link>
+                    {session?.user?.role === 'ADMIN' && (
+                        <Link href="/admin" className="block w-full text-left px-4 py-2 text-sm text-teal-600 hover:bg-teal-50 transition-colors font-bold">
+                            Admin Portal
+                        </Link>
+                    )}
                     <button
                       onClick={() => signOut({ callbackUrl: '/' })}
                       className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"

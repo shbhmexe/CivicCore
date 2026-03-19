@@ -35,7 +35,7 @@ export function Footer() {
                         <li><Link href="/dashboard" className="hover:text-orange-400 transition-colors">Incident Feed</Link></li>
                         <li><Link href="/report" className="hover:text-orange-400 transition-colors">Report Issue</Link></li>
                         <li><Link href="#" className="hover:text-orange-400 transition-colors">Karma Leaderboard</Link></li>
-                        <li><Link href="#" className="hover:text-orange-400 transition-colors">Authorities Portal</Link></li>
+                        <li><Link href="/admin" className="hover:text-orange-400 transition-colors font-semibold text-teal-300">Admin Dashboard</Link></li>
                     </ul>
                 </div>
 

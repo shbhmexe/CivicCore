@@ -50,17 +50,17 @@ async function getAuthorityFromCoordinates(lat: number, lng: number, departmentN
  */
 export async function runEscalationCycle() {
     try {
-        const tenDaysAgo = new Date();
-        tenDaysAgo.setDate(tenDaysAgo.getDate() - 10);
+        const fiveMinutesAgo = new Date();
+        fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
 
-        // Find all complaints that are not resolved and older than 10 days
+        // Find all complaints that are not resolved and older than 5 minutes
         const overdueComplaints = await (prisma as any).complaint.findMany({
             where: {
                 status: {
                     in: ['PENDING', 'ASSIGNED', 'IN_PROGRESS']
                 },
                 createdAt: {
-                    lt: tenDaysAgo
+                    lt: fiveMinutesAgo
                 },
                 isEscalated: false,
                 escalationEmailSent: false
@@ -98,11 +98,14 @@ export async function runEscalationCycle() {
                     authorityDetails
                 );
 
+                // Update the complaint record as escalated
                 await (prisma as any).complaint.update({
                     where: { id: complaint.id },
                     data: {
                         isEscalated: true,
-                        escalationEmailSent: emailSent
+                        escalationEmailSent: true,
+                        escalatedTo: authorityDetails,
+                        escalatedAt: new Date()
                     }
                 });
 

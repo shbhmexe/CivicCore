@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import {
     AlertTriangle,
@@ -34,6 +34,9 @@ interface Complaint {
     status: string;
     address: string | null;
     createdAt: string;
+    isEscalated: boolean;
+    escalatedTo: string | null;
+    escalatedAt: string | null;
     user: ComplaintUser;
 }
 
@@ -124,7 +127,12 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
                         {filteredComplaints.map((complaint) => (
                             <div
                                 key={complaint.id}
-                                className="group relative p-5 rounded-2xl border border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.15] transition-all duration-300"
+                                className={cn(
+                                    "group relative p-5 rounded-2xl border transition-all duration-300",
+                                    complaint.isEscalated 
+                                        ? "border-amber-500/30 bg-amber-500/[0.03] hover:bg-amber-500/[0.06] hover:border-amber-500/50" 
+                                        : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.15]"
+                                )}
                             >
                                 {/* Background Link (for card click) */}
                                 <Link
@@ -148,9 +156,16 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
                                                 {complaint.severity?.charAt(0) || 'L'}
                                             </div>
                                             <div className="min-w-0 flex-1">
-                                                <h3 className="text-base font-bold text-white group-hover:text-teal-400 transition-colors truncate">
-                                                    {complaint.title}
-                                                </h3>
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="text-base font-bold text-white group-hover:text-teal-400 transition-colors truncate">
+                                                        {complaint.title}
+                                                    </h3>
+                                                    {complaint.isEscalated && (
+                                                        <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-500/20 rounded text-[9px] font-black text-amber-400 uppercase tracking-tighter border border-amber-500/30">
+                                                            <ArrowUpRight className="w-2.5 h-2.5" /> AI Escalated
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
                                                     <span className="inline-flex items-center gap-1 text-[11px] text-gray-300 bg-white/10 px-2 py-0.5 rounded-md border border-white/10">
                                                         {complaint.category}
@@ -164,10 +179,14 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
                                                     )}>
                                                         {complaint.severity || 'MEDIUM'}
                                                     </span>
-                                                    <span className="flex items-center gap-1 text-[11px] text-gray-400">
-                                                        <Calendar className="w-3 h-3" />
-                                                        {new Date(complaint.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                                                    </span>
+                                                    {complaint.status === 'PENDING' && !complaint.isEscalated && (
+                                                        <EscalationCountdown createdAt={complaint.createdAt} />
+                                                    )}
+                                                    {complaint.isEscalated && complaint.escalatedTo && (
+                                                        <span className="flex items-center gap-1 text-[10px] text-amber-400/80 italic font-medium">
+                                                            <Shield className="w-2.5 h-2.5" /> Routed to: {complaint.escalatedTo.slice(0, 30)}...
+                                                        </span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </div>
@@ -244,5 +263,45 @@ function StatCard({ label, value, icon: Icon, gradient, active, onClick }: any) 
                 <Icon className={cn("w-5 h-5", active ? "text-teal-400" : "text-white/40")} />
             </div>
         </button>
+    );
+}
+
+function EscalationCountdown({ createdAt }: { createdAt: string }) {
+    const [timeLeft, setTimeLeft] = useState<string>('');
+    const [isUrgent, setIsUrgent] = useState(false);
+
+    useEffect(() => {
+        const calculateTime = () => {
+            const createdDate = new Date(createdAt);
+            const now = new Date();
+            const thresholdInMs = 5 * 60 * 1000; // 5 minutes
+            const diff = thresholdInMs - (now.getTime() - createdDate.getTime());
+
+            if (diff <= 0) {
+                setTimeLeft('Escalating now...');
+                setIsUrgent(true);
+                return;
+            }
+
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            
+            if (minutes === 0) setIsUrgent(true);
+            setTimeLeft(`AI Escalation in ${minutes}:${seconds.toString().padStart(2, '0')}`);
+        };
+
+        calculateTime();
+        const timer = setInterval(calculateTime, 1000);
+        return () => clearInterval(timer);
+    }, [createdAt]);
+
+    return (
+        <span className={cn(
+            "flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md border",
+            isUrgent ? "bg-amber-500/20 text-amber-400 border-amber-500/30 animate-pulse font-black" : "bg-white/5 text-gray-400 border-white/10"
+        )}>
+            <Clock className={cn("w-2.5 h-2.5", isUrgent && "animate-spin-slow")} />
+            {timeLeft}
+        </span>
     );
 }

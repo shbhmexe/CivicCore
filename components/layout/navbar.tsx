@@ -18,9 +18,9 @@ const citizenNavItems = [
 ];
 
 const adminNavItems = [
+    { name: 'Home', href: '/', icon: Home },
     { name: 'Admin Hub', href: '/admin', icon: LayoutDashboard },
-    { name: 'Live Feed', href: '/feed', icon: Activity },
-    { name: 'System Overview', href: '/admin', icon: Home },
+    { name: 'Global Feed', href: '/feed', icon: Activity },
 ];
 
 export function Navbar() {
@@ -128,6 +128,11 @@ export function Navbar() {
                                     <Link href="/profile" className="block w-full text-left px-4 py-2 text-sm text-[#1e293b] hover:bg-gray-50 transition-colors">
                                         My Profile
                                     </Link>
+                                    {session.user?.role === 'ADMIN' && (
+                                        <Link href="/admin" className="block w-full text-left px-4 py-2 text-sm text-teal-600 hover:bg-teal-50 transition-colors font-semibold">
+                                            Admin Dashboard
+                                        </Link>
+                                    )}
                                     <button
                                         onClick={() => signOut({ callbackUrl: '/' })}
                                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"

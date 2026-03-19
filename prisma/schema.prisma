@@ -94,6 +94,8 @@ model Complaint {
   verificationMethod String    @default("CALL")
   isConfirmed        Boolean   @default(false)
   isEscalated        Boolean   @default(false)
+  escalatedTo        String?
+  escalatedAt        DateTime?
   resolutionScore    Float?
   totalVerifications Int       @default(0)
   totalIgnores       Int       @default(0)
