@@ -4,12 +4,7 @@ import next from "next";
 import cron from "node-cron";
 import { runEscalationCycle } from "./lib/escalation";
 
-// Schedule the AI Escalation Bot to run every 1 minute (for testing)
-// cron.schedule("* * * * *", async () => {
-//     console.log("[CRON] 🤖 Starting scheduled Escalation Bot check...");
-//     await runEscalationCycle();
-//     console.log("[CRON] ✅ Escalation Bot finished execution.");
-// });
+// Cron job will be initialized inside app.prepare() to have access to Socket.IO
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -102,6 +97,24 @@ app.prepare().then(() => {
         socket.on("disconnect", () => {
             console.log("[Socket.IO] Client disconnected:", socket.id);
         });
+    });
+
+    // --- AUTOMATED ESCALATION CRON (Runs every 1 minute) ---
+    cron.schedule('*/1 * * * *', async () => {
+        try {
+            console.log('[CRON] ⚡ Checking for overdue reports...');
+            await runEscalationCycle((complaint) => {
+                // Notify all connected admins about the auto-escalation
+                io.emit("auto-escalated-alert", {
+                    id: complaint.id,
+                    title: complaint.title,
+                    authority: complaint.customEscalationAuthority || 'AI Identified Authority'
+                });
+                console.log(`[CRON] 📢 Broadcasted auto-escalation alert for ${complaint.id}`);
+            });
+        } catch (err) {
+            console.error('[CRON] High-speed escalation failed:', err);
+        }
     });
 
     httpServer.listen(port, bindAddress, () => {

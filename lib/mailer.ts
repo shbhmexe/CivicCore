@@ -4,29 +4,29 @@ import nodemailer from 'nodemailer';
 // Note: This requires an App Password if using 2FA on Gmail
 // Create a transporter using Gmail SMTP with explicit configuration for robustness
 const transporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // Use TLS (STARTTLS)
-    auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-    },
-    tls: {
-       // Do not fail on invalid certs (common for local dev)
-       rejectUnauthorized: false
-    }
+  host: 'smtp.gmail.com',
+  port: 587,
+  secure: false, // Use TLS (STARTTLS)
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS
+  },
+  tls: {
+    // Do not fail on invalid certs (common for local dev)
+    rejectUnauthorized: false
+  }
 });
 
 // A professional HTML template for escalating civic issues to local authorities
 export const getEscalationEmailTemplate = (
-    complaintId: string, 
-    title: string, 
-    description: string, 
-    address: string | null, 
-    latitude: number, 
-    longitude: number, 
-    severity: string,
-    authorityDetails: string
+  complaintId: string,
+  title: string,
+  description: string,
+  address: string | null,
+  latitude: number,
+  longitude: number,
+  severity: string,
+  authorityDetails: string
 ) => `
 <!DOCTYPE html>
 <html>
@@ -98,41 +98,41 @@ export const getEscalationEmailTemplate = (
 `;
 
 export async function sendEscalationEmail(
-    toEmail: string,
-    complaintId: string,
-    title: string,
-    description: string,
-    address: string | null,
-    latitude: number,
-    longitude: number,
-    severity: string,
-    authorityDetails: string
+  toEmail: string,
+  complaintId: string,
+  title: string,
+  description: string,
+  address: string | null,
+  latitude: number,
+  longitude: number,
+  severity: string,
+  authorityDetails: string
 ) {
-    if (process.env.DRY_RUN === 'true') {
-        console.log(`[MAILER] [DRY RUN] Would send escalation email to ${toEmail} for complaint ${complaintId}`);
-        return true;
-    }
+  if (process.env.DRY_RUN === 'true') {
+    console.log(`[MAILER] [DRY RUN] Would send escalation email to ${toEmail} for complaint ${complaintId}`);
+    return true;
+  }
 
-    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
-        console.warn("[MAILER] SMTP_USER or SMTP_PASS not configured. Skipping email send.");
-        return false;
-    }
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn("[MAILER] SMTP_USER or SMTP_PASS not configured. Skipping email send.");
+    return false;
+  }
 
-    try {
-        const mailOptions = {
-            from: `"CivicCore System" <${process.env.SMTP_USER}>`,
-            to: toEmail,
-            subject: `[URGENT] Escalated: 10-Day Pending Issue - ${title}`,
-            html: getEscalationEmailTemplate(
-                complaintId, title, description, address, latitude, longitude, severity, authorityDetails
-            )
-        };
+  try {
+    const mailOptions = {
+      from: `"CivicCore System" <${process.env.SMTP_USER}>`,
+      to: toEmail,
+      subject: `[URGENT] Regional District Authority Escalation: 10-Day Pending Issue - ${title}`,
+      html: getEscalationEmailTemplate(
+        complaintId, title, description, address, latitude, longitude, severity, authorityDetails
+      )
+    };
 
-        const info = await transporter.sendMail(mailOptions);
-        console.log(`[MAILER] Escalation email sent to ${toEmail}. Message ID: ${info.messageId}`);
-        return true;
-    } catch (error) {
-        console.error("[MAILER] Failed to send email:", error);
-        return false;
-    }
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[MAILER] Escalation email sent to ${toEmail}. Message ID: ${info.messageId}`);
+    return true;
+  } catch (error) {
+    console.error("[MAILER] Failed to send email:", error);
+    return false;
+  }
 }

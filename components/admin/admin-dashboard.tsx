@@ -23,6 +23,8 @@ import { toggleEscalationPauseAction } from '@/app/actions/escalation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/toaster';
+import { useRouter } from 'next/navigation';
+import { getSocket } from '@/lib/socket';
 
 interface ComplaintUser {
     id: string;
@@ -52,6 +54,34 @@ type FilterType = 'ALL' | 'PENDING' | 'ACTIVE' | 'RESOLVED' | 'REJECTED';
 
 export function AdminDashboard({ complaints, resolveRate }: { complaints: Complaint[]; resolveRate: number }) {
     const [filter, setFilter] = useState<FilterType>('ALL');
+    const router = useRouter();
+
+    useEffect(() => {
+        const socket = getSocket();
+
+        socket.on('auto-escalated-alert', (data: { id: string, title: string, authority: string }) => {
+            console.log(`[Socket.IO] Received auto-escalation alert for ${data.id}`);
+            toast(
+                `⚡ AUTO-ESCALATED: "${data.title}" has been sent to ${data.authority}.`,
+                'success'
+            );
+            router.refresh();
+        });
+
+        socket.on('vote-updated', (data: { complaintId: string; voteCount: number }) => {
+            router.refresh();
+        });
+
+        socket.on('status-update', () => {
+             router.refresh();
+        });
+
+        return () => {
+            socket.off('auto-escalated-alert');
+            socket.off('vote-updated');
+            socket.off('status-update');
+        };
+    }, [router]);
 
     const stats = {
         total: complaints.length,
@@ -187,9 +217,13 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
                                                     )}>
                                                         {complaint.severity || 'MEDIUM'}
                                                     </span>
-                                                    {complaint.status === 'PENDING' && !complaint.isEscalated && (
+                                                    {complaint.status === 'PENDING' && (
                                                         <div className="flex items-center gap-1.5 pointer-events-auto">
-                                                            <EscalationCountdown createdAt={complaint.createdAt} paused={complaint.escalationPaused} />
+                                                            <EscalationCountdown 
+                                                                createdAt={complaint.createdAt} 
+                                                                paused={complaint.escalationPaused} 
+                                                                isEscalated={complaint.isEscalated}
+                                                            />
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
@@ -292,7 +326,7 @@ function StatCard({ label, value, icon: Icon, gradient, active, onClick }: any) 
     );
 }
 
-function EscalationCountdown({ createdAt, paused }: { createdAt: string, paused?: boolean }) {
+function EscalationCountdown({ createdAt, paused, isEscalated }: { createdAt: string, paused?: boolean, isEscalated?: boolean }) {
     const [timeLeft, setTimeLeft] = useState<string>('');
     const [isUrgent, setIsUrgent] = useState(false);
 
@@ -325,7 +359,16 @@ function EscalationCountdown({ createdAt, paused }: { createdAt: string, paused?
         calculateTime();
         const timer = setInterval(calculateTime, 1000);
         return () => clearInterval(timer);
-    }, [createdAt, paused]);
+    }, [createdAt, paused, isEscalated]);
+
+    if (isEscalated) {
+        return (
+            <span className="flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md border bg-teal-500/10 text-teal-400 border-teal-500/30 uppercase tracking-widest">
+                <CheckCircle2 className="w-2.5 h-2.5" />
+                Escalation Sent
+            </span>
+        );
+    }
 
     return (
         <span className={cn(

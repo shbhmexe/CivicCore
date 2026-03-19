@@ -11,8 +11,8 @@ import {
     DialogDescription
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2, Mail, Shield, AlertTriangle, CheckCircle, Eye } from 'lucide-react';
-import { getEscalationPreviewAction, sendManualEscalationAction } from '@/app/actions/escalation';
+import { Loader2, Mail, ShieldCheck, Save } from 'lucide-react';
+import { getEscalationPreviewAction, sendManualEscalationAction, saveEscalationRoutingAction } from '@/app/actions/escalation';
 import { toast } from '@/components/ui/toaster';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -20,8 +20,9 @@ import { Input } from '@/components/ui/input';
 export function EscalationDialog({ complaintId, title }: { complaintId: string, title: string }) {
     const [open, setOpen] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [preview, setPreview] = useState<{ authorityDetails: string, html: string, deptEmail: string } | null>(null);
+    const [preview, setPreview] = useState<{ authorityDetails: string, html: string, deptEmail: string, isCustom?: boolean } | null>(null);
     const [sending, setSending] = useState(false);
+    const [saving, setSaving] = useState(false);
     const [editedAuthority, setEditedAuthority] = useState('');
     const [editedEmail, setEditedEmail] = useState('');
 
@@ -33,7 +34,8 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
                 setPreview({
                     authorityDetails: result.authorityDetails!,
                     html: result.html!,
-                    deptEmail: result.deptEmail!
+                    deptEmail: result.deptEmail!,
+                    isCustom: result.isCustom
                 });
                 setEditedAuthority(result.authorityDetails!);
                 setEditedEmail(result.deptEmail!);
@@ -58,12 +60,29 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
                 setOpen(false);
                 setPreview(null);
             } else {
-                toast(result.error || 'Failed to send escalation', 'error');
+                toast(result.error || 'Failed to send email', 'error');
             }
-        } catch (err) {
-            toast('Failed to send escalation', 'error');
+        } catch (error: any) {
+            toast(error.message || 'An unexpected error occurred', 'error');
         } finally {
             setSending(false);
+        }
+    };
+
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            const result = await saveEscalationRoutingAction(complaintId, editedAuthority, editedEmail);
+            if (result.success) {
+                toast('Routing details saved successfully!', 'success');
+                if (preview) setPreview({ ...preview, isCustom: true });
+            } else {
+                toast(result.error || 'Failed to save routing', 'error');
+            }
+        } catch (error: any) {
+            toast(error.message || 'An unexpected error occurred', 'error');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -79,7 +98,7 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
                     size="sm" 
                     className="bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20 hover:text-amber-300 h-8 text-[10px] font-bold uppercase tracking-wider gap-2 px-3 pointer-events-auto relative z-10"
                 >
-                    <Shield className="w-3.5 h-3.5" />
+                    <ShieldCheck className="w-3.5 h-3.5" />
                     AI Escalate
                 </Button>
             </DialogTrigger>
@@ -87,7 +106,7 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-3 text-xl font-black">
                         <div className="p-2 bg-amber-500/20 rounded-lg">
-                            <Shield className="w-5 h-5 text-amber-400" />
+                            <ShieldCheck className="w-5 h-5 text-amber-400" />
                         </div>
                         AI Escalation Preview
                     </DialogTitle>
@@ -105,7 +124,10 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
                     <div className="space-y-6">
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">Suggested Authority (AI)</label>
+                                    <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1.5 block">
+                                        Suggested Authority (AI)
+                                        {preview.isCustom && <span className="ml-2 text-[9px] text-teal-400 border border-teal-500/30 px-1 rounded animate-pulse">VERIFIED</span>}
+                                    </label>
                                     <Input 
                                         value={editedAuthority}
                                         onChange={(e) => setEditedAuthority(e.target.value)}
@@ -148,7 +170,7 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
                     </div>
                 ) : null}
 
-                <DialogFooter className="gap-3 sm:gap-2 mt-2">
+                <DialogFooter className="flex justify-end gap-3 pt-4 border-t border-white/10 mt-6 bg-slate-900/50 p-4 -mx-6 -mb-6 rounded-b-2xl">
                     <Button 
                         variant="ghost" 
                         onClick={() => setOpen(false)}
@@ -157,21 +179,21 @@ export function EscalationDialog({ complaintId, title }: { complaintId: string, 
                         Cancel
                     </Button>
                     <Button 
-                        disabled={!preview || sending}
-                        onClick={handleSend}
-                        className="bg-amber-500 hover:bg-amber-600 text-white font-black uppercase text-[11px] tracking-widest h-10 px-8 shadow-lg shadow-amber-500/20"
+                        variant="outline" 
+                        onClick={handleSave} 
+                        disabled={!preview || sending || saving}
+                        className="border-white/10 hover:bg-white/5 text-gray-400 gap-2"
                     >
-                        {sending ? (
-                            <>
-                                <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
-                                Sending...
-                            </>
-                        ) : (
-                            <>
-                                <Mail className="w-3.5 h-3.5 mr-2" />
-                                Send Escalation
-                            </>
-                        )}
+                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                        Save Routing
+                    </Button>
+                    <Button 
+                        onClick={handleSend} 
+                        disabled={!preview || sending || saving}
+                        className="bg-teal-600 hover:bg-teal-500 text-white gap-2 px-6 shadow-lg shadow-teal-500/20 border-0"
+                    >
+                        {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                        Send Escalation Now
                     </Button>
                 </DialogFooter>
             </DialogContent>

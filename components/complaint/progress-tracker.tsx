@@ -6,10 +6,10 @@ import { CheckCircle2, Clock, User, Wrench, Flag, XCircle, AlertTriangle } from 
 import { getSocket } from '@/lib/socket';
 
 const STEPS = [
-  { key: 'PENDING',     label: 'Report Filed',     icon: Clock,        description: 'Your report has been submitted and is awaiting review.' },
-  { key: 'ASSIGNED',    label: 'Assigned',          icon: User,         description: 'An authority has been assigned to handle your issue.' },
-  { key: 'IN_PROGRESS', label: 'In Progress',       icon: Wrench,       description: 'Work is actively being done to resolve the issue.' },
-  { key: 'RESOLVED',    label: 'Resolved',          icon: CheckCircle2, description: 'The issue has been successfully resolved!' },
+  { key: 'PENDING', label: 'Report Filed', icon: Clock, description: 'Your report has been submitted and is awaiting review.' },
+  { key: 'ASSIGNED', label: 'Assigned', icon: User, description: 'An authority has been assigned to handle your issue.' },
+  { key: 'IN_PROGRESS', label: 'In Progress', icon: Wrench, description: 'Work is actively being done to resolve the issue.' },
+  { key: 'RESOLVED', label: 'Resolved', icon: CheckCircle2, description: 'The issue has been successfully resolved!' },
 ];
 
 function getStepIndex(status: string): number {
@@ -18,18 +18,18 @@ function getStepIndex(status: string): number {
   return idx === -1 ? 0 : idx;
 }
 
-export function ProgressTracker({ 
-    complaintId,
-    status: initialStatus, 
-    createdAt, 
-    resolvedAt: initialResolvedAt, 
-    isEscalated: initialIsEscalated 
-}: { 
-    complaintId: string;
-    status: string; 
-    createdAt: Date; 
-    resolvedAt?: Date | null; 
-    isEscalated?: boolean 
+export function ProgressTracker({
+  complaintId,
+  status: initialStatus,
+  createdAt,
+  resolvedAt: initialResolvedAt,
+  isEscalated: initialIsEscalated
+}: {
+  complaintId: string;
+  status: string;
+  createdAt: Date;
+  resolvedAt?: Date | null;
+  isEscalated?: boolean
 }) {
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
   const [resolvedAt, setResolvedAt] = useState(initialResolvedAt);
@@ -50,31 +50,31 @@ export function ProgressTracker({
     const socket = getSocket();
 
     const joinRoom = () => {
-        console.log(`[ProgressTracker] Joining room for complaint: ${complaintId}`);
-        socket.emit('join-complaint', complaintId);
+      console.log(`[ProgressTracker] Joining room for complaint: ${complaintId}`);
+      socket.emit('join-complaint', complaintId);
     };
 
     if (socket.connected) {
-        joinRoom();
+      joinRoom();
     }
     socket.on('connect', joinRoom);
 
     const handleStatusUpdate = (data: { complaintId: string; status: string; resolvedAt?: Date }) => {
-        if (data.complaintId === complaintId) {
-            console.log("[ProgressTracker] Status update received:", data.status);
-            setCurrentStatus(data.status);
-            if (data.resolvedAt) setResolvedAt(new Date(data.resolvedAt));
-            
-            // Refresh server components (Hero status, etc.)
-            router.refresh();
-        }
+      if (data.complaintId === complaintId) {
+        console.log("[ProgressTracker] Status update received:", data.status);
+        setCurrentStatus(data.status);
+        if (data.resolvedAt) setResolvedAt(new Date(data.resolvedAt));
+
+        // Refresh server components (Hero status, etc.)
+        router.refresh();
+      }
     };
 
     socket.on('status-update', handleStatusUpdate);
 
     return () => {
-        socket.off('connect', joinRoom);
-        socket.off('status-update', handleStatusUpdate);
+      socket.off('connect', joinRoom);
+      socket.off('status-update', handleStatusUpdate);
     };
   }, [complaintId]);
 
@@ -104,7 +104,7 @@ export function ProgressTracker({
           <div>
             <p className="text-sm font-black text-orange-600 uppercase tracking-wider">Escalated to Higher Authority</p>
             <p className="text-xs text-[#475569] font-medium leading-relaxed">
-              This issue has been pending for 10+ days. It has been automatically escalated to the Regional District Authority for immediate attention.
+            If an issue remains unresolved for more than 10 days, it will be automatically escalated to the Regional District Authority for immediate attention.
             </p>
           </div>
         </div>
@@ -113,18 +113,18 @@ export function ProgressTracker({
         <span className="w-8 h-1 bg-teal-500 rounded-full" />
         Status Timeline
       </h2>
-      
+
       {/* Desktop: Horizontal stepper */}
       <div className="hidden sm:block">
         <div className="flex items-start justify-between relative">
           {/* Background line */}
           <div className="absolute top-5 left-[10%] right-[10%] h-0.5 bg-gray-100 z-0" />
           {/* Active line */}
-          <div 
+          <div
             className="absolute top-5 left-[10%] h-0.5 bg-gradient-to-r from-teal-500 to-emerald-500 z-[1] transition-all duration-700 ease-out"
             style={{ width: `${currentIndex === 0 ? 0 : (currentIndex / (STEPS.length - 1)) * 80}%` }}
           />
-          
+
           {STEPS.map((step, index) => {
             const StepIcon = step.icon;
             const isCompleted = index < currentIndex;
@@ -136,10 +136,10 @@ export function ProgressTracker({
                 {/* Circle */}
                 <div className={`
                   relative w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all duration-500
-                  ${isCompleted 
-                    ? 'bg-gradient-to-br from-teal-500 to-emerald-500 border-teal-400 shadow-lg shadow-teal-500/30' 
-                    : isCurrent 
-                      ? 'bg-teal-500/20 border-teal-400 shadow-lg shadow-teal-500/20 animate-pulse' 
+                  ${isCompleted
+                    ? 'bg-gradient-to-br from-teal-500 to-emerald-500 border-teal-400 shadow-lg shadow-teal-500/30'
+                    : isCurrent
+                      ? 'bg-teal-500/20 border-teal-400 shadow-lg shadow-teal-500/20 animate-pulse'
                       : 'bg-white border-gray-100'
                   }
                 `}>
@@ -155,16 +155,14 @@ export function ProgressTracker({
                 </div>
 
                 {/* Label */}
-                <p className={`mt-2 text-xs font-black text-center ${
-                  isCompleted || isCurrent ? 'text-teal-500' : 'text-gray-300'
-                }`}>
+                <p className={`mt-2 text-xs font-black text-center ${isCompleted || isCurrent ? 'text-teal-500' : 'text-gray-300'
+                  }`}>
                   {step.label}
                 </p>
-                
+
                 {/* Description */}
-                <p className={`mt-1 text-[10px] text-center max-w-[120px] leading-tight font-medium ${
-                  isCurrent ? 'text-[#475569]' : 'text-gray-300'
-                }`}>
+                <p className={`mt-1 text-[10px] text-center max-w-[120px] leading-tight font-medium ${isCurrent ? 'text-[#475569]' : 'text-gray-300'
+                  }`}>
                   {isCurrent ? step.description : ''}
                 </p>
 
@@ -199,10 +197,10 @@ export function ProgressTracker({
               <div className="flex flex-col items-center">
                 <div className={`
                   w-8 h-8 rounded-full flex items-center justify-center border-2 flex-shrink-0
-                  ${isCompleted 
-                    ? 'bg-gradient-to-br from-teal-500 to-emerald-500 border-teal-400' 
-                    : isCurrent 
-                      ? 'bg-teal-500/20 border-teal-400 animate-pulse' 
+                  ${isCompleted
+                    ? 'bg-gradient-to-br from-teal-500 to-emerald-500 border-teal-400'
+                    : isCurrent
+                      ? 'bg-teal-500/20 border-teal-400 animate-pulse'
                       : 'bg-white border-gray-100'
                   }
                 `}>

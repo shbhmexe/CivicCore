@@ -54,7 +54,7 @@ async function getAuthorityFromCoordinates(lat: number, lng: number, departmentN
 /**
  * Core escalation logic that doesn't depend on Next.js-specific environment like revalidatePath.
  */
-export async function runEscalationCycle() {
+export async function runEscalationCycle(onEscalate?: (complaint: any) => void) {
     try {
         const fiveMinutesAgo = new Date();
         fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
@@ -69,7 +69,8 @@ export async function runEscalationCycle() {
                     lt: fiveMinutesAgo
                 },
                 isEscalated: false,
-                escalationEmailSent: false
+                escalationEmailSent: false,
+                escalationPaused: false
             },
             include: {
                 department: true
@@ -80,22 +81,25 @@ export async function runEscalationCycle() {
             return { success: true, count: 0 };
         }
 
-        console.log(`[ESCALATION BOT] Found ${overdueComplaints.length} overdue complaints. Initiating escalation sequence...`);
+        console.log(`[ESCALATION BOT] Found ${overdueComplaints.length} overdue complaints. Parallelizing escalation...`);
 
-        let successCount = 0;
-
-        for (const complaint of overdueComplaints) {
+        const escalationPromises = overdueComplaints.map(async (complaint: any) => {
             try {
                 const deptName = complaint.department?.name || 'General Municipal Services';
                 const deptEmail = complaint.department?.email || process.env.SMTP_USER || 'admin@civiccore.app';
-                
-                console.log(`[ESCALATION BOT] Determining authority for ${complaint.id}...`);
-                const { authority, email: aiEmail } = await getAuthorityFromCoordinates(complaint.latitude, complaint.longitude, deptName);
-                
-                const finalEmail = aiEmail || deptEmail;
-                
+
+                // Use custom routing if provided by admin, otherwise use AI
+                let authority = complaint.customEscalationAuthority;
+                let finalEmail = complaint.customEscalationEmail;
+
+                if (!authority || !finalEmail) {
+                    const aiResult = await getAuthorityFromCoordinates(complaint.latitude, complaint.longitude, deptName);
+                    if (!authority) authority = aiResult.authority;
+                    if (!finalEmail) finalEmail = aiResult.email || deptEmail;
+                }
+
                 const emailSent = await sendEscalationEmail(
-                    finalEmail,
+                    finalEmail!,
                     complaint.id,
                     complaint.title,
                     complaint.description,
@@ -103,31 +107,48 @@ export async function runEscalationCycle() {
                     complaint.latitude,
                     complaint.longitude,
                     complaint.severity,
-                    authority
+                    `Regional District Authority (${authority})`
                 );
 
-                // Update the complaint record as escalated
-                await (prisma as any).complaint.update({
-                    where: { id: complaint.id },
-                    data: {
-                        isEscalated: true,
-                        escalationEmailSent: true,
-                        escalatedTo: authority,
-                        escalatedAt: new Date()
-                    }
-                });
+                if (emailSent) {
+                    await (prisma as any).complaint.update({
+                        where: { id: complaint.id },
+                        data: {
+                            isEscalated: true,
+                            escalationEmailSent: true,
+                            escalatedTo: authority,
+                            escalatedAt: new Date()
+                        }
+                    });
 
-                console.log(`[ESCALATION BOT] Successfully escalated issue: ${complaint.id} to ${authority}`);
-                successCount++;
+                    // Trigger callback for real-time notifications
+                    if (onEscalate) onEscalate(complaint);
+
+                    return true;
+                }
+                return false;
             } catch (err) {
-                console.error(`[ESCALATION BOT] Failed to escalate complaint ${complaint.id}:`, err);
+                console.error(`[ESCALATION BOT] Failed for ${complaint.id}:`, err);
+                return false;
             }
-        }
+        });
+
+        const results = await Promise.all(escalationPromises);
+        const successCount = results.filter(Boolean).length;
 
         return { success: true, count: successCount };
-    } catch (error) {
-        console.error('[ESCALATION BOT] Critical Error:', error);
-        return { success: false, error: 'Failed to process escalation' };
+    } catch (error: any) {
+        // Handle common database hibernation/connection issues gracefully
+        const isConnError = error.message?.includes('PrismaClientInitializationError') ||
+            error.message?.includes('Can\'t reach database server');
+
+        if (isConnError) {
+            console.log('[CRON] 😴 Database is hibernating or connecting. Retrying in next cycle (15s)...');
+            return { success: false, error: 'Database connecting' };
+        }
+
+        console.error('[ESCALATION BOT] Unexpected Error:', error);
+        return { success: false, error: error.message };
     }
 }
 
@@ -146,10 +167,21 @@ export async function prepareEscalation(complaintId: string) {
 
         const deptName = complaint.department?.name || 'General Municipal Services';
         const deptEmail = complaint.department?.email || process.env.SMTP_USER || 'admin@civiccore.app';
-        
+
+        // Return saved routing if present, otherwise fetch AI suggestion
+        if (complaint.customEscalationAuthority && complaint.customEscalationEmail) {
+            return {
+                success: true,
+                complaint,
+                authorityDetails: complaint.customEscalationAuthority,
+                deptEmail: complaint.customEscalationEmail,
+                isCustom: true
+            };
+        }
+
         const { authority, email: aiEmail } = await getAuthorityFromCoordinates(
-            complaint.latitude, 
-            complaint.longitude, 
+            complaint.latitude,
+            complaint.longitude,
             deptName
         );
 
@@ -158,6 +190,7 @@ export async function prepareEscalation(complaintId: string) {
             complaint,
             authorityDetails: authority,
             deptEmail: aiEmail || deptEmail,
+            isCustom: false
         };
     } catch (error: any) {
         console.error('[ESCALATION] Preparation failed:', error);

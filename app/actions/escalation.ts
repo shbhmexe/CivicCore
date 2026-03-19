@@ -45,7 +45,8 @@ export async function getEscalationPreviewAction(id: string) {
             authorityDetails, 
             html, 
             deptEmail: result.deptEmail,
-            title: complaint.title
+            title: complaint.title,
+            isCustom: result.isCustom
         };
     }
     
@@ -82,7 +83,9 @@ export async function sendManualEscalationAction(id: string, authorityDetails: s
                     isEscalated: true,
                     escalationEmailSent: true,
                     escalatedTo: authorityDetails,
-                    escalatedAt: new Date()
+                    escalatedAt: new Date(),
+                    customEscalationAuthority: authorityDetails,
+                    customEscalationEmail: targetEmail
                 }
             });
 
@@ -116,6 +119,27 @@ export async function toggleEscalationPauseAction(id: string, paused: boolean) {
         return { success: true };
     } catch (error: any) {
         console.error('[ACTION] Toggle pause failed:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Persists the admin-verified escalation routing to the database.
+ */
+export async function saveEscalationRoutingAction(id: string, authority: string, email: string) {
+    try {
+        await (prisma as any).complaint.update({
+            where: { id },
+            data: {
+                customEscalationAuthority: authority,
+                customEscalationEmail: email
+            }
+        });
+        
+        revalidatePath('/admin');
+        return { success: true };
+    } catch (error: any) {
+        console.error('[ACTION] Save routing failed:', error);
         return { success: false, error: error.message };
     }
 }
