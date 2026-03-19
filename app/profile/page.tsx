@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Mail, Shield, Award, MapPin, Calendar, Camera, Edit2, Loader2, BarChart3, CheckCircle2, AlertTriangle, Settings, ThumbsUp, MessageSquare, Clock, ExternalLink } from 'lucide-react';
+import { User, Mail, Shield, Award, MapPin, Calendar, Camera, Edit2, Loader2, BarChart3, CheckCircle2, AlertTriangle, Settings, ThumbsUp, MessageSquare, Clock, ExternalLink, ShoppingBag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useRef, useEffect } from 'react';
 import { updateProfileImage, getUserProfile } from '@/app/actions/user';
@@ -30,6 +30,7 @@ export default function ProfilePage() {
     const [reports, setReports] = useState<UserReport[]>([]);
     const [reportCount, setReportCount] = useState(0);
     const [karmaPoints, setKarmaPoints] = useState(0);
+    const [redemptions, setRedemptions] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const router = useRouter();
@@ -42,6 +43,7 @@ export default function ProfilePage() {
                     setReports((data as any).reports || []);
                     setReportCount((data as any).reportCount || 0);
                     setKarmaPoints((data as any).karmaPoints || 0);
+                    setRedemptions((data as any).redemptions || []);
                 }
             } catch (e) {
                 console.error('Failed to load profile:', e);
@@ -197,9 +199,17 @@ export default function ProfilePage() {
                                             <div className="text-2xl font-black text-white">{isLoading ? '—' : reportCount}</div>
                                             <div className="text-[10px] text-blue-100/60 uppercase font-extrabold tracking-widest mt-1">Reports</div>
                                         </div>
-                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center hover:bg-white/10 transition-all cursor-default shadow-lg">
+                                        <div className="bg-white/5 border border-white/10 rounded-2xl p-4 text-center hover:bg-white/10 transition-all cursor-default shadow-lg group relative overflow-hidden">
                                             <div className="text-2xl font-black text-orange-400">{isLoading ? '—' : karmaPoints}</div>
                                             <div className="text-[10px] text-blue-100/60 uppercase font-extrabold tracking-widest mt-1">Karma</div>
+                                            
+                                            {!isAdmin && (
+                                                <Link href="/rewards">
+                                                    <Button variant="ghost" size="sm" className="mt-3 h-7 text-[10px] font-bold bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 border border-orange-500/20 rounded-lg w-full">
+                                                        Redeem
+                                                    </Button>
+                                                </Link>
+                                            )}
                                         </div>
                                     </>
                                 )}
@@ -395,6 +405,38 @@ export default function ProfilePage() {
                                                         + Report Another Issue
                                                     </Button>
                                                 </Link>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Redemption History Section */}
+                                    {!isAdmin && redemptions.length > 0 && (
+                                        <div className="mt-12 space-y-6 pt-12 border-t border-gray-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-blue-500/10 rounded-lg">
+                                                    <Award className="text-blue-500 w-5 h-5" />
+                                                </div>
+                                                <h3 className="text-xl font-extrabold text-[#002f5a]">Redemption History</h3>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {redemptions.map((r: any) => (
+                                                    <div key={r.id} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/50 flex items-center justify-between group">
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="w-10 h-10 bg-white rounded-xl shadow-sm flex items-center justify-center p-2 border border-gray-100">
+                                                                <ShoppingBag className="w-6 h-6 text-gray-800" />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-sm font-bold text-[#002f5a]">{r.reward}</p>
+                                                                <p className="text-[10px] font-mono text-blue-500 select-all cursor-pointer bg-blue-50 px-1.5 py-0.5 rounded mt-1">{r.code}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-xs font-black text-red-500">-{r.points}</p>
+                                                            <p className="text-[10px] text-gray-400 mt-1">{new Date(r.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
                                             </div>
                                         </div>
                                     )}

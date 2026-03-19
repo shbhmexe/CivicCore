@@ -64,7 +64,7 @@ export function ResolutionDialog({ complaintId }: { complaintId: string }) {
                         <CheckCircle2 className="w-5 h-5 text-green-400" />
                         Mark Issue as Resolved
                     </DialogTitle>
-                    <DialogDescription className="text-gray-400">
+                    <DialogDescription className="text-gray-300 font-medium">
                         Upload resolution proof photo. This awards +10 Karma to the reporter.
                     </DialogDescription>
                 </DialogHeader>
@@ -90,7 +90,7 @@ export function ResolutionDialog({ complaintId }: { complaintId: string }) {
                             </div>
                             <div className="text-center">
                                 <p className="text-sm font-semibold text-white">Click to upload proof image</p>
-                                <p className="text-xs text-gray-500 mt-1">JPG, PNG, WEBP • Max 10MB</p>
+                                <p className="text-xs text-gray-400 mt-1">JPG, PNG, WEBP • Max 10MB</p>
                             </div>
                         </button>
                     ) : (
@@ -113,7 +113,7 @@ export function ResolutionDialog({ complaintId }: { complaintId: string }) {
                 </div>
 
                 <DialogFooter className="mt-2">
-                    <Button type="button" variant="ghost" onClick={() => { setOpen(false); clearFile(); }} className="text-gray-400">
+                    <Button type="button" variant="ghost" onClick={() => { setOpen(false); clearFile(); }} className="text-gray-300 hover:text-white hover:bg-white/10">
                         Cancel
                     </Button>
                     <Button

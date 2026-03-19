@@ -78,14 +78,14 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
                         <h1 className="text-4xl font-extrabold text-white tracking-tight">
                             Admin Command Center
                         </h1>
-                        <p className="text-gray-400 mt-2 text-base max-w-xl">
+                        <p className="text-gray-300 mt-2 text-base max-w-xl">
                             Real-time oversight of citizen-reported infrastructure issues. Manage, assign, and resolve municipal complaints.
                         </p>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
                         <div className="px-5 py-3 bg-white/5 rounded-2xl border border-white/10 backdrop-blur-sm text-center">
                             <p className="text-3xl font-extrabold text-teal-400">{resolveRate}%</p>
-                            <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mt-1">Resolution Rate</p>
+                            <p className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mt-1">Resolution Rate</p>
                         </div>
                     </div>
                 </div>
@@ -107,7 +107,7 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
                         <BarChart3 className="w-5 h-5 text-teal-400" />
                         Citizen Reports
                     </h2>
-                    <span className="text-[10px] text-gray-500 font-semibold uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+                    <span className="text-[10px] text-gray-300 font-semibold uppercase tracking-widest bg-white/10 px-3 py-1.5 rounded-lg border border-white/20">
                         {filteredComplaints.length} {filterLabel}
                     </span>
                 </div>
@@ -152,7 +152,7 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
                                                     {complaint.title}
                                                 </h3>
                                                 <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                                    <span className="inline-flex items-center gap-1 text-[11px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-md border border-white/5">
+                                                    <span className="inline-flex items-center gap-1 text-[11px] text-gray-300 bg-white/10 px-2 py-0.5 rounded-md border border-white/10">
                                                         {complaint.category}
                                                     </span>
                                                     <span className={cn(
@@ -164,7 +164,7 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
                                                     )}>
                                                         {complaint.severity || 'MEDIUM'}
                                                     </span>
-                                                    <span className="flex items-center gap-1 text-[11px] text-gray-600">
+                                                    <span className="flex items-center gap-1 text-[11px] text-gray-400">
                                                         <Calendar className="w-3 h-3" />
                                                         {new Date(complaint.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                                                     </span>
@@ -176,7 +176,7 @@ export function AdminDashboard({ complaints, resolveRate }: { complaints: Compla
                                     {/* Location */}
                                     <div className="flex items-center gap-1.5 text-gray-400 lg:w-48 flex-shrink-0 pointer-events-none">
                                         <MapPin className="w-3.5 h-3.5 text-teal-500 flex-shrink-0" />
-                                        <span className="text-xs truncate">
+                                        <span className="text-xs text-gray-200 truncate font-medium">
                                             {complaint.address || "Coordinates pending..."}
                                         </span>
                                     </div>
@@ -238,7 +238,7 @@ function StatCard({ label, value, icon: Icon, gradient, active, onClick }: any) 
             <div className="absolute inset-0 bg-black/40" />
             <div className="relative z-10 flex items-center justify-between">
                 <div>
-                    <p className="text-[10px] font-bold text-white/60 uppercase tracking-widest">{label}</p>
+                    <p className="text-[10px] font-bold text-white/80 uppercase tracking-widest">{label}</p>
                     <p className="text-2xl font-extrabold text-white mt-0.5">{value}</p>
                 </div>
                 <Icon className={cn("w-5 h-5", active ? "text-teal-400" : "text-white/40")} />

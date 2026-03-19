@@ -65,11 +65,12 @@ export async function updateProfileImage(formData: FormData) {
 export async function getUserProfile() {
     const session = await auth();
     if (!session?.user?.id) {
+        console.log("[DEBUG] No session user found");
         return { error: "Unauthorized" };
     }
 
     try {
-        const user = await prisma.user.findUnique({
+        let user = await (prisma.user as any).findUnique({
             where: { id: session.user.id },
             select: {
                 karmaPoints: true,
@@ -87,15 +88,44 @@ export async function getUserProfile() {
                         _count: { select: { votes: true, comments: true } },
                     },
                 },
+                redemptions: {
+                    orderBy: { createdAt: 'desc' },
+                },
             },
         });
+
+        if (!user && session.user.email) {
+            user = await (prisma.user as any).findUnique({
+                where: { email: session.user.email },
+                select: {
+                    karmaPoints: true,
+                    complaints: {
+                        orderBy: { createdAt: 'desc' },
+                        select: {
+                            id: true,
+                            title: true,
+                            category: true,
+                            severity: true,
+                            status: true,
+                            address: true,
+                            images: true,
+                            createdAt: true,
+                            _count: { select: { votes: true, comments: true } },
+                        },
+                    },
+                    redemptions: {
+                        orderBy: { createdAt: 'desc' },
+                    },
+                },
+            });
+        }
 
         if (!user) return { error: "User not found" };
 
         return {
             karmaPoints: user.karmaPoints,
             reportCount: user.complaints.length,
-            reports: user.complaints.map(c => ({
+            reports: user.complaints.map((c: any) => ({
                 id: c.id,
                 title: c.title,
                 category: c.category,
@@ -107,6 +137,13 @@ export async function getUserProfile() {
                 votes: c._count.votes,
                 comments: c._count.comments,
             })),
+            redemptions: user.redemptions.map((r: any) => ({
+                id: r.id,
+                reward: r.reward,
+                points: r.points,
+                code: r.code,
+                createdAt: r.createdAt.toISOString()
+            }))
         };
     } catch (error) {
         console.error("Fetch profile error:", error);

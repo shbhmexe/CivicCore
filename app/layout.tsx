@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { AuthProvider } from "@/components/providers/auth-provider";
+import { NearbyVerifier } from "@/components/complaint/nearby-verifier";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -39,6 +40,7 @@ export default function RootLayout({
           </main>
           <Footer />
           <Toaster />
+          <NearbyVerifier />
         </AuthProvider>
       </body>
     </html>

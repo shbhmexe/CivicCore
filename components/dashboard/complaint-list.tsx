@@ -4,6 +4,7 @@ import { MessageSquare, CheckCircle2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { CardUpvoteButton } from '@/components/complaint/card-upvote-button';
+import { DeleteComplaintButton } from '@/components/complaint/delete-complaint-button';
 
 // Badge Component (Inline for speed, or extract)
 function StatusBadge({ status }: { status: string }) {
@@ -67,10 +68,21 @@ export function ComplaintList({ complaints, userId }: { complaints: any[]; userI
                                 </div>
                             )}
 
-                            <div className="mt-2 text-sm text-muted-foreground flex items-center gap-2">
+                            <div className="mt-2 text-sm text-muted-foreground flex items-center flex-wrap gap-2">
                                 <span className="font-semibold text-primary">{complaint.category}</span>
+                                
+                                {complaint.department?.name && (
+                                    <>
+                                        <span>•</span>
+                                        <span className="text-blue-400 font-medium flex items-center gap-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>
+                                            {complaint.department.name}
+                                        </span>
+                                    </>
+                                )}
+
                                 <span>•</span>
-                                <span>{complaint.address || "Unknown Location"}</span>
+                                <span className="truncate max-w-[200px]">{complaint.address || "Unknown Location"}</span>
                             </div>
                         </CardContent>
                         <CardFooter className="flex justify-between pt-2">
@@ -84,6 +96,10 @@ export function ComplaintList({ complaints, userId }: { complaints: any[]; userI
                                     <MessageSquare className="w-4 h-4 mr-1" />
                                     {complaint._count?.comments || 0}
                                 </Button>
+                                <DeleteComplaintButton 
+                                    complaintId={complaint.id} 
+                                    isOwner={userId === complaint.userId} 
+                                />
                             </div>
                         </CardFooter>
                     </Card>

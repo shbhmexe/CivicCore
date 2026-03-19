@@ -19,6 +19,7 @@ export default async function MyReportsPage() {
         where: { userId: session.user.id },
         orderBy: { createdAt: 'desc' },
         include: {
+            department: true,
             votes: true,
             _count: {
                 select: { comments: true }

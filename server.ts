@@ -1,6 +1,16 @@
 import { createServer } from "http";
 import { Server } from "socket.io";
 import next from "next";
+import cron from "node-cron";
+import { runEscalationCycle } from "./lib/escalation";
+
+// Schedule the AI Escalation Bot to run every 6 hours
+// It will find complaints older than 10 days, look up the authority, and send emails.
+cron.schedule("0 */6 * * *", async () => {
+    console.log("[CRON] 🤖 Starting scheduled Escalation Bot check...");
+    await runEscalationCycle();
+    console.log("[CRON] ✅ Escalation Bot finished execution.");
+});
 
 const dev = process.env.NODE_ENV !== "production";
 const hostname = "localhost";
@@ -57,6 +67,21 @@ app.prepare().then(() => {
         socket.on("vote-change", (data: { complaintId: string; voteCount: number }) => {
             socket.to(`complaint-${data.complaintId}`).emit("vote-updated", data);
             console.log(`[Socket.IO] Vote update broadcast for complaint-${data.complaintId}: ${data.voteCount} votes`);
+        });
+
+        // Broadcast new civic activities (reports, resolutions, etc.) to the live feed
+        socket.on("new-activity", () => {
+             // Simply broadcast a refetch signal to everyone listening to the feed
+             io.emit("activity-broadcast");
+             console.log(`[Socket.IO] New activity broadcasted to all clients`);
+        });
+
+        // Broadcast newly created issues to all clients for nearby crowd verification
+        socket.on("trigger-nearby-verification", (data: { complaintId: string; title: string; latitude: number; longitude: number }) => {
+            // Forward the issue coordinates to all connected clients
+            // The clients will calculate their own distance to decide whether to show the popup
+            socket.broadcast.emit("broadcast-nearby-verification", data);
+            console.log(`[Socket.IO] Broadcasted verification request for issue: ${data.complaintId} at [${data.latitude}, ${data.longitude}]`);
         });
 
         socket.on("disconnect", () => {

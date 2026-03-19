@@ -39,6 +39,7 @@ export interface AnalyzeResult {
     method?: string;
     isAI?: boolean;
     aiConfidence?: number;
+    aiVerdict?: 'AUTHENTIC' | 'AI_FLAGGED';
     error?: string;
 }
 
@@ -65,6 +66,7 @@ export async function analyzeImage(formData: FormData): Promise<AnalyzeResult> {
                 method: result.method,
                 isAI: result.isAI,
                 aiConfidence: result.aiConfidence,
+                aiVerdict: result.aiVerdict,
             };
         }
 
@@ -88,6 +90,7 @@ export async function analyzeImage(formData: FormData): Promise<AnalyzeResult> {
             method: result.method,
             isAI: result.isAI,
             aiConfidence: result.aiConfidence,
+            aiVerdict: result.aiVerdict,
         };
     } catch (error) {
         console.error("Analyze Action Error:", error);

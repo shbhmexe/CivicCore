@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { MapPin, AlertTriangle, Lightbulb, Droplet, Menu, ShieldCheck, PlusCircle, User } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
+import { HomeMap } from '@/components/dashboard/home-map';
 
 export default function Home() {
   const { data: session, status } = useSession();
@@ -194,52 +195,9 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* Map Section - Focused on Global View (Original Version) */}
-            <div className="w-full h-[500px] bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden relative mb-12 transform transition-all group hover:shadow-2xl">
-                 {/* Original Global Map Background */}
-                 <div 
-                   className="absolute inset-0 bg-cover bg-center transition-transform duration-[10s] group-hover:scale-110 opacity-70 grayscale-[20%]"
-                   style={{ backgroundImage: 'url("https://images.unsplash.com/photo-1524661135-423995f22d0b?q=80&w=2000&auto=format&fit=crop")' }}
-                 >
-                    {/* Darker overlay on the map edges to draw focus to pins */}
-                    <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-white/20"></div>
-                 </div>
-                 
-                 {/* Pothole Pin */}
-                 <div className="absolute top-[40%] left-[15%] flex flex-col items-center animate-bounce-slow">
-                    <div className="bg-[#002f5a] text-white force-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-xl flex items-center gap-2 mb-2 border border-white/20 backdrop-blur-sm">
-                        <div className="w-2.5 h-2.5 bg-blue-400 rounded-full animate-pulse"></div>
-                        <span>Pothole</span>
-                    </div>
-                    <MapPin className="text-[#002f5a] fill-white w-8 h-8 -mt-2 drop-shadow-2xl" />
-                 </div>
-
-                 {/* Garbage Pin */}
-                 <div className="absolute top-[60%] left-[35%] flex flex-col items-center">
-                    <div className="bg-[#16a34a] text-white force-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-xl flex items-center gap-2 mb-2 border border-white/20 backdrop-blur-sm">
-                        <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
-                        <span>Garbage</span>
-                    </div>
-                    <MapPin className="text-[#16a34a] fill-white w-8 h-8 -mt-2 drop-shadow-2xl" />
-                 </div>
-
-                 {/* Streetlight Pin */}
-                 <div className="absolute top-[20%] right-[35%] flex flex-col items-center">
-                    <div className="bg-[#ef4444] text-white force-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-xl flex items-center gap-2 mb-2 border border-white/20 backdrop-blur-sm">
-                        <div className="w-2.5 h-2.5 bg-white rounded-full animate-pulse"></div>
-                        <span>Streetlight</span>
-                    </div>
-                    <MapPin className="text-[#ef4444] fill-white w-8 h-8 -mt-2 drop-shadow-2xl" />
-                 </div>
-                 
-                 {/* Water Leak Pin */}
-                 <div className="absolute top-[50%] right-[15%] flex flex-col items-center">
-                    <div className="bg-[#ea580c] text-white force-white text-[12px] font-bold px-4 py-2 rounded-xl shadow-xl flex items-center gap-2 mb-2 border border-white/20 backdrop-blur-sm">
-                        <div className="w-2.5 h-2.5 bg-orange-200 rounded-full animate-pulse"></div>
-                        <span>Water Leak</span>
-                    </div>
-                     <MapPin className="text-[#ea580c] fill-white w-8 h-8 -mt-2 drop-shadow-2xl" />
-                 </div>
+            {/* Interactive India Map Section */}
+            <div className="mb-16">
+                <HomeMap />
             </div>
 
             {/* Bottom 2 Cards Grid */}

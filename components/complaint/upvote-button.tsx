@@ -81,6 +81,11 @@ export function UpvoteButton({ complaintId, initialVoteCount, initialVoted }: Up
                     complaintId,
                     voteCount: result.voteCount,
                 });
+                
+                // If the vote reached a milestone, trigger global activity broadcast
+                if (result.voteCount === 10 || result.voteCount === 50) {
+                     socket.emit('new-activity');
+                }
             }
         } catch (error) {
             // Revert optimistic update

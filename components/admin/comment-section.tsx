@@ -145,15 +145,15 @@ export function CommentSection({ complaintId, currentUserId, currentUserRole }: 
     };
 
     return (
-        <div className="flex flex-col h-[500px] bg-gray-900/40 border border-white/10 rounded-2xl overflow-hidden">
+        <div className="flex flex-col h-[600px] bg-white rounded-2xl overflow-hidden border border-gray-100">
             {/* Header */}
-            <div className="px-5 py-4 border-b border-white/10 bg-black/20 flex items-center justify-between">
+            <div className="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex items-center justify-between">
                 <div>
-                    <h3 className="text-base font-bold text-white flex items-center gap-2">
+                    <h3 className="text-sm font-black text-[#1e293b] flex items-center gap-2 uppercase tracking-wider">
                         💬 Discussion Thread
                     </h3>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                        Real-time chat between admin and citizen
+                    <p className="text-[10px] text-[#64748b] font-bold mt-1 uppercase tracking-widest">
+                        Official communication channel
                     </p>
                 </div>
 
@@ -175,15 +175,15 @@ export function CommentSection({ complaintId, currentUserId, currentUserRole }: 
                                     <div className="mx-auto w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mb-4 border border-red-500/20">
                                         <AlertTriangle className="w-6 h-6 text-red-500" />
                                     </div>
-                                    <DialogTitle className="text-xl text-center text-white">Clear entire chat?</DialogTitle>
-                                    <DialogDescription className="text-center text-gray-400">
+                                    <DialogTitle className="text-xl text-center text-[#1e293b]">Clear entire chat?</DialogTitle>
+                                    <DialogDescription className="text-center text-[#64748b]">
                                         This action will permanently delete all messages in this discussion. This cannot be undone.
                                     </DialogDescription>
                                 </DialogHeader>
                                 <DialogFooter className="flex flex-row gap-2 mt-4">
                                     <Button
                                         variant="outline"
-                                        className="flex-1 bg-white/5 border-white/10 text-white hover:bg-white/10"
+                                        className="flex-1 bg-gray-100 border-gray-200 text-[#1e293b] hover:bg-gray-200"
                                         onClick={() => setShowConfirmClear(false)}
                                     >
                                         Cancel
@@ -223,10 +223,10 @@ export function CommentSection({ complaintId, currentUserId, currentUserRole }: 
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
                 {isLoading ? (
                     <div className="flex items-center justify-center h-full">
-                        <Loader2 className="w-6 h-6 text-teal-400 animate-spin" />
+                        <Loader2 className="w-6 h-6 text-teal-500 animate-spin" />
                     </div>
                 ) : comments.length === 0 ? (
-                    <div className="flex items-center justify-center h-full text-gray-500 text-sm">
+                    <div className="flex items-center justify-center h-full text-[#64748b] text-sm font-medium">
                         No messages yet. Start the conversation!
                     </div>
                 ) : (
@@ -255,11 +255,11 @@ export function CommentSection({ complaintId, currentUserId, currentUserRole }: 
                                     </div>
 
                                     {/* Message bubble */}
-                                    <div className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${isOwnMessage
+                                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed font-medium ${isOwnMessage
                                         ? isAdminMessage
-                                            ? 'bg-amber-500/20 text-amber-100 border border-amber-500/20 rounded-br-md'
-                                            : 'bg-teal-500/20 text-teal-100 border border-teal-500/20 rounded-br-md'
-                                        : 'bg-white/5 text-gray-300 border border-white/10 rounded-bl-md'
+                                            ? 'bg-amber-100 text-amber-900 border border-amber-200 rounded-br-md shadow-sm'
+                                            : 'bg-teal-100 text-teal-900 border border-teal-200 rounded-br-md shadow-sm'
+                                        : 'bg-gray-100 text-[#475569] border border-gray-200 rounded-bl-md shadow-sm'
                                         }`}>
                                         {comment.content}
                                     </div>
@@ -277,15 +277,15 @@ export function CommentSection({ complaintId, currentUserId, currentUserRole }: 
             </div>
 
             {/* Input */}
-            <div className="px-4 py-3 border-t border-white/10 bg-black/20">
-                <div className="flex items-center gap-2">
+            <div className="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+                <div className="flex items-center gap-3">
                     <input
                         type="text"
                         value={newComment}
                         onChange={(e) => setNewComment(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder="Type a message..."
-                        className="flex-1 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-sm text-white placeholder-gray-500 focus:outline-none focus:border-teal-500/50 transition-colors"
+                        className="flex-1 px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-[#1e293b] placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/10 transition-all shadow-sm"
                     />
                     <Button
                         onClick={handleSend}

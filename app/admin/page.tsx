@@ -19,8 +19,10 @@ export default async function AdminPage() {
     const resolveRate = total > 0 ? Math.round((resolved / total) * 100) : 0;
 
     return (
-        <div className="min-h-screen pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-            <AdminDashboard complaints={complaints as any} resolveRate={resolveRate} />
+        <div className="min-h-screen bg-[#0b0f1a] text-white pt-24 pb-12 px-4 sm:px-6 lg:px-8">
+            <div className="max-w-7xl mx-auto">
+                <AdminDashboard complaints={complaints as any} resolveRate={resolveRate} />
+            </div>
         </div>
     );
 }

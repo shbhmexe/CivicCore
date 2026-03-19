@@ -22,6 +22,55 @@ model User {
   comments    Comment[]
   complaints  Complaint[]
   votes       Vote[]
+  redemptions Redemption[]
+}
+
+model Redemption {
+  id        String   @id @default(cuid())
+  userId    String
+  reward    String
+  points    Int
+  code      String?  @default("XXXX-XXXX-XXXX")
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  type        String   // e.g., "NEW_REPORT", "RESOLVED", "UPVOTES"
+  content     String   // e.g., "🆕 New pothole reported on MG Road"
+  complaintId String?
+  userId      String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
+
+model IssueVerification {
+  id          String   @id @default(cuid())
+  userId      String
+  complaintId String
+  type        String   // "VERIFY" or "IGNORE"
+  createdAt   DateTime @default(now())
+
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
+
+  // Ensure a user can only vote once per complaint
+  @@unique([userId, complaintId])
+  @@index([complaintId])
+}
+
+
+model Department {
+  id          String      @id @default(cuid())
+  name        String      @unique // e.g. "Roads & Infrastructure"
+  slug        String      @unique // e.g. "roads"
+  email       String?     // Optional default email for the department
+  phone       String?
+  description String?
+  complaints  Complaint[]
 }
 
 model Complaint {
@@ -36,14 +85,28 @@ model Complaint {
   resolvedAt      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  images          String[]
-  resolutionImage String?
-  severity        Severity  @default(LOW)
-  status          Status    @default(PENDING)
-  isConfirmed     Boolean   @default(false)
-  comments        Comment[]
-  user            User      @relation(fields: [userId], references: [id])
-  votes           Vote[]
+  images             String[]
+  videoUrl           String?
+  resolutionImage    String?
+  severity           Severity  @default(LOW)
+  status             Status    @default(PENDING)
+  verificationMethod String    @default("CALL")
+  isConfirmed        Boolean   @default(false)
+  isEscalated        Boolean   @default(false)
+  resolutionScore    Float?
+  totalVerifications Int       @default(0)
+  totalIgnores       Int       @default(0)
+  confidenceScore    Float     @default(0)
+  escalationEmailSent Boolean  @default(false)
+  
+  comments           Comment[]
+  user               User                @relation(fields: [userId], references: [id])
+  votes              Vote[]
+  issueVerifications IssueVerification[]
+  
+  departmentId    String?
+  department      Department? @relation(fields: [departmentId], references: [id])
+
 
   @@index([status])
   @@index([userId])
@@ -55,8 +118,9 @@ model Vote {
   complaintId String
   createdAt   DateTime  @default(now())
   type        String
-  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id])
+
 
   @@unique([userId, complaintId])
 }
@@ -67,8 +131,9 @@ model Comment {
   userId      String
   content     String
   createdAt   DateTime  @default(now())
-  complaint   Complaint @relation(fields: [complaintId], references: [id])
+  complaint   Complaint @relation(fields: [complaintId], references: [id], onDelete: Cascade)
   user        User      @relation(fields: [userId], references: [id])
+
 }
 
 enum Role {

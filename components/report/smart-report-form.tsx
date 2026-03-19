@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useActionState } from 'react';
+import { useState, useRef, useActionState, useEffect } from 'react';
 import { createReport } from '@/app/actions/report';
 import { analyzeImage } from '@/app/actions/analyze';
 import type { AnalyzeResult } from '@/app/actions/analyze';
@@ -10,10 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import exifr from 'exif-js';
-import { Loader2, MapPin, Upload, Wand2, Brain, Sparkles, Eye, BarChart3, ShieldCheck, AlertCircle, Fingerprint } from 'lucide-react';
+import { Loader2, Brain, Sparkles, AlertCircle, RefreshCcw, Handshake, CheckCircle2, ShieldAlert, Fingerprint, Eye, BarChart3, Upload, ShieldCheck, Video, MapPin, Search, Mic, Square, Navigation, Navigation2, Crosshair, Layers, Building2, Wand2 } from 'lucide-react';
 import Image from 'next/image';
 import { VoiceConfirmation } from '@/components/report/voice-confirmation';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
+import { io } from 'socket.io-client';
 
 // Mock or Real Reverse Geocoding
 async function getAddressFromCoords(lat: number, lng: number) {
@@ -31,9 +33,18 @@ const initialState = {
 }
 
 export function SmartReportForm() {
-    const [state, formAction, isPending] = useActionState(createReport, initialState);
+    const [state, formAction, isPending] = useActionState(async (prevState: any, formData: FormData) => {
+        const start = Date.now();
+        const result = await createReport(prevState, formData);
+        const elapsed = Date.now() - start;
+        // Guarantee at least 3 seconds of loading animation UX
+        if (elapsed < 3000) {
+            await new Promise(r => setTimeout(r, 3000 - elapsed));
+        }
+        return result;
+    }, initialState);
     const router = useRouter();
-    const [submittedData, setSubmittedData] = useState<{ complaintId: string; userName: string; issueTitle: string } | null>(null);
+    const [submittedData, setSubmittedData] = useState<{ complaintId: string; userName: string; issueTitle: string; merged?: boolean } | null>(null);
     const [preview, setPreview] = useState<string | null>(null);
     const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null);
     const [address, setAddress] = useState<string>('');
@@ -46,6 +57,60 @@ export function SmartReportForm() {
     const [category, setCategory] = useState('');
     const [severity, setSeverity] = useState('MEDIUM');
     const [phoneNumber, setPhoneNumber] = useState('');
+    const [verificationMethod, setVerificationMethod] = useState<'CALL' | 'VIDEO'>('CALL');
+    
+    // Video Handling
+    const [videoPreview, setVideoPreview] = useState<string | null>(null);
+    const videoInputRef = useRef<HTMLInputElement>(null);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    // Fake progress simulation
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (isPending) {
+            setUploadProgress(5); // Start at 5% instantly
+            interval = setInterval(() => {
+                setUploadProgress((prev) => {
+                    const increment = Math.random() * 15;
+                    const next = prev + increment;
+                    return next > 92 ? 92 : next; // Hold at 92% until done
+                });
+            }, 400);
+        } else {
+            setUploadProgress(100);
+            const timeout = setTimeout(() => setUploadProgress(0), 500);
+            return () => clearTimeout(timeout);
+        }
+        return () => clearInterval(interval);
+    }, [isPending]);
+
+    // Handle auto-redirect for video verification method
+    useEffect(() => {
+        if (submittedData && state?.verificationMethod === 'VIDEO') {
+            const t = setTimeout(() => {
+                router.push(`/complaints/${submittedData.complaintId}`);
+            }, 3000);
+            return () => clearTimeout(t);
+        }
+    }, [submittedData, state?.verificationMethod, router]);
+
+    // Emit socket event on successful submission (if not merged)
+    useEffect(() => {
+        if (state?.success && !state?.merged) {
+            const socket = io({ path: '/api/socketio' });
+            socket.emit('new-activity');
+
+            // Trigger nearby verification broadcast
+            if (state.latitude && state.longitude) {
+                socket.emit('trigger-nearby-verification', {
+                    complaintId: state.complaintId,
+                    title: state.issueTitle,
+                    latitude: state.latitude,
+                    longitude: state.longitude
+                });
+            }
+        }
+    }, [state?.success, state?.merged, state?.latitude, state?.longitude, state?.complaintId, state?.issueTitle]);
 
     // AI Analysis Data
     const [aiData, setAiData] = useState<AnalyzeResult | null>(null);
@@ -169,6 +234,25 @@ export function SmartReportForm() {
         });
     };
 
+    const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) {
+            setVideoPreview(null);
+            return;
+        }
+
+        // Limit to 100MB
+        if (file.size > 100 * 1024 * 1024) {
+            alert('Video must be 100MB or smaller.');
+            e.target.value = '';
+            setVideoPreview(null);
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(file);
+        setVideoPreview(objectUrl);
+    };
+
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -263,12 +347,65 @@ export function SmartReportForm() {
         setSubmittedData({
             complaintId: state.complaintId,
             userName: state.userName || 'Citizen',
-            issueTitle: state.issueTitle || 'Civic Issue'
+            issueTitle: state.issueTitle || 'Civic Issue',
+            merged: state.merged
         });
     }
 
     // ── Show Voice Confirmation Screen ──
     if (submittedData) {
+        if (submittedData.merged) {
+             return (
+                 <Card className="w-full max-w-2xl mx-auto glass-card animate-in fade-in zoom-in duration-500">
+                     <CardHeader className="text-center pb-2">
+                         <div className="mx-auto w-20 h-20 bg-blue-500/20 rounded-full flex items-center justify-center mb-4 border border-blue-500/30">
+                             <Layers className="w-10 h-10 text-blue-400" />
+                         </div>
+                         <CardTitle className="text-2xl font-bold flex flex-col items-center gap-2 text-blue-400">
+                             Duplicate Detected & Auto-Merged!
+                         </CardTitle>
+                     </CardHeader>
+                     <CardContent className="space-y-6 text-center">
+                         <p className="text-sm text-foreground/80 max-w-md mx-auto">
+                             Our AI found an existing report for this exact issue nearby! Instead of creating a duplicate ticket, we automatically added your report as an <strong>upvote</strong> to escalate the original issue faster.
+                         </p>
+                         <p className="text-xs text-muted-foreground mt-2">
+                             You have been awarded Karma points for your contribution!
+                         </p>
+                         <div className="flex flex-col items-center justify-center pt-8 gap-3">
+                             <Button onClick={() => router.push(`/complaints/${submittedData.complaintId}`)} className="bg-blue-600 hover:bg-blue-500 px-8 py-6 text-md font-bold text-white rounded-xl shadow-lg shadow-blue-500/20">
+                                 View Original Issue
+                             </Button>
+                         </div>
+                     </CardContent>
+                 </Card>
+             );
+        }
+
+        if (state?.verificationMethod === 'VIDEO') {
+            return (
+                <Card className="w-full max-w-2xl mx-auto glass-card animate-in fade-in zoom-in duration-500">
+                    <CardHeader className="text-center pb-2">
+                        <div className="mx-auto w-20 h-20 bg-emerald-500/20 rounded-full flex items-center justify-center mb-4 border border-emerald-500/30">
+                            <ShieldCheck className="w-10 h-10 text-emerald-400" />
+                        </div>
+                        <CardTitle className="text-2xl font-bold flex flex-col items-center gap-2 text-emerald-400">
+                            Evidence Uploaded Successfully!
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6 text-center">
+                        <p className="text-sm text-foreground/80 max-w-md mx-auto">
+                            Your report <strong>&quot;{submittedData.issueTitle}&quot;</strong> has been submitted and verified with your video proof. Authorities have been immediately notified.
+                        </p>
+                        <div className="flex flex-col items-center justify-center pt-8 gap-3">
+                            <Loader2 className="w-6 h-6 animate-spin text-blue-400" />
+                            <span className="text-xs font-medium text-blue-400 animate-pulse">Redirecting to report tracking...</span>
+                        </div>
+                    </CardContent>
+                </Card>
+            );
+        }
+
         return (
             <Card className="w-full max-w-2xl mx-auto glass-card">
                 <CardHeader>
@@ -298,6 +435,19 @@ export function SmartReportForm() {
                 </CardContent>
             </Card>
         );
+    }
+
+    // Determine if we show voice confirmation (now only if method is CALL)
+    if (state?.success && state?.complaintId && !submittedData && state?.verificationMethod === 'CALL') {
+        setSubmittedData({
+            complaintId: state.complaintId,
+            userName: state.userName || 'Citizen',
+            issueTitle: state.issueTitle || 'Civic Issue'
+        });
+    } else if (state?.success && state?.complaintId && state?.verificationMethod === 'VIDEO') {
+        // Automatically rediect or show success without call confirmation since they uploaded a video
+        router.push(`/complaints/${state.complaintId}`);
+        return null;
     }
 
     return (
@@ -375,25 +525,46 @@ export function SmartReportForm() {
                                     </div>
                                 )}
 
-                                {/* Category + Severity + Confidence Row */}
-                                <div className="grid grid-cols-3 gap-3">
-                                    <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
-                                        <div className="text-xs text-muted-foreground mb-1">Category</div>
-                                        <div className="font-bold text-primary text-sm">{aiData.category}</div>
-                                    </div>
-                                    <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
-                                        <div className="text-xs text-muted-foreground mb-1">Severity</div>
-                                        <div className={`font-bold text-sm inline-block px-2 py-0.5 rounded ${getSeverityColor(aiData.severity || '')}`}>
-                                            {aiData.severity}
+                                {(() => {
+                                    // --- Category to Department Visual Map ---
+                                    const departmentNames: Record<string, string> = {
+                                        'pothole': 'Roads & Infrastructure',
+                                        'garbage': 'Sanitation & Waste',
+                                        'water logging': 'Water & Drainage',
+                                        'broken streetlight': 'Electrical & Lighting',
+                                        'fallen tree': 'Parks & Forestry',
+                                        'clean road': 'General Municipal'
+                                    };
+                                    const mappedDept = departmentNames[aiData.category?.toLowerCase() || ''] || 'General Municipal';
+
+                                    return (
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                            <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
+                                                <div className="text-xs text-muted-foreground mb-1">Category</div>
+                                                <div className="font-bold text-primary text-sm line-clamp-1" title={aiData.category}>{aiData.category}</div>
+                                            </div>
+                                            <div className="bg-white/5 rounded-lg p-3 text-center border border-blue-500/20">
+                                                <div className="text-xs text-blue-300/70 mb-1">Routed Dept</div>
+                                                <div className="font-bold text-blue-400 text-sm line-clamp-1 flex items-center justify-center gap-1" title={mappedDept}>
+                                                    <Building2 className="w-3.5 h-3.5" />
+                                                    {mappedDept}
+                                                </div>
+                                            </div>
+                                            <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
+                                                <div className="text-xs text-muted-foreground mb-1">Severity</div>
+                                                <div className={`font-bold text-sm inline-block px-2 py-0.5 rounded ${getSeverityColor(aiData.severity || '')}`}>
+                                                    {aiData.severity}
+                                                </div>
+                                            </div>
+                                            <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
+                                                <div className="text-xs text-muted-foreground mb-1">Confidence</div>
+                                                <div className="font-bold text-emerald-400 text-sm">
+                                                    {((aiData.confidence || 0) * 100).toFixed(1)}%
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="bg-white/5 rounded-lg p-3 text-center border border-white/10">
-                                        <div className="text-xs text-muted-foreground mb-1">Confidence</div>
-                                        <div className="font-bold text-emerald-400 text-sm">
-                                            {((aiData.confidence || 0) * 100).toFixed(1)}%
-                                        </div>
-                                    </div>
-                                </div>
+                                    );
+                                })()}
 
                                 {/* Confidence Bars */}
                                 {aiData.rawScores && aiData.rawScores.length > 0 && (
@@ -426,33 +597,33 @@ export function SmartReportForm() {
 
                                 {/* ══════ Authenticity Verification ══════ */}
                                 <div className="pt-2 border-t border-white/10 mt-4">
-                                    {aiData.aiConfidence && aiData.aiConfidence > 0 ? (
+                                    {aiData.aiVerdict ? (
                                         <>
                                             <div className="flex items-center justify-between bg-white/5 rounded-xl p-4 border border-white/10">
                                                 <div className="flex items-center gap-3">
-                                                    <div className={`p-2 rounded-lg ${aiData.isAI ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                                                        {aiData.isAI ? <AlertCircle className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
+                                                    <div className={`p-2 rounded-lg ${aiData.aiVerdict === 'AI_FLAGGED' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                                                        {aiData.aiVerdict === 'AI_FLAGGED' ? <AlertCircle className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
                                                     </div>
                                                     <div>
                                                         <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1">
                                                             <Fingerprint className="w-3 h-3" />
                                                             Image Authenticity
                                                         </div>
-                                                        <div className={`text-sm font-bold ${aiData.isAI ? 'text-red-400' : 'text-emerald-400'}`}>
-                                                            {aiData.isAI ? 'Flagged: AI Generated' : 'Verified: Authentic Image'}
+                                                        <div className={`text-sm font-bold ${aiData.aiVerdict === 'AI_FLAGGED' ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                            {aiData.aiVerdict === 'AI_FLAGGED' ? 'Flagged: AI Generated' : 'Likely Authentic Image'}
                                                         </div>
                                                     </div>
                                                 </div>
                                                 <div className="text-right">
                                                     <div className="text-[10px] text-muted-foreground uppercase">Confidence</div>
-                                                    <div className={`text-xs font-mono font-bold ${aiData.isAI ? 'text-red-400' : 'text-emerald-400'}`}>
-                                                        {(aiData.aiConfidence * 100).toFixed(1)}%
+                                                    <div className={`text-xs font-mono font-bold ${aiData.aiVerdict === 'AI_FLAGGED' ? 'text-red-400' : 'text-emerald-400'}`}>
+                                                        {(aiData.aiConfidence! * 100).toFixed(1)}%
                                                     </div>
                                                 </div>
                                             </div>
-                                            {aiData.isAI && (
-                                                <p className="mt-2 text-[10px] text-red-300/60 leading-tight px-1">
-                                                    Warning: This image shows patterns consistent with AI generation. Fraudulent reports may result in account deactivation.
+                                            {aiData.aiVerdict === 'AI_FLAGGED' && (
+                                                <p className="mt-2 text-[10px] leading-tight px-1 text-red-300/80">
+                                                    Warning: Multiple AI models agree this image shows strong patterns of AI generation.
                                                 </p>
                                             )}
                                         </>
@@ -563,21 +734,9 @@ export function SmartReportForm() {
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="phoneNumber">Phone Number (For AI Confirmation Call)</Label>
-                        <Input
-                            name="phoneNumber"
-                            id="phoneNumber"
-                            type="tel"
-                            value={phoneNumber}
-                            onChange={(e) => setPhoneNumber(e.target.value)}
-                            placeholder="+91XXXXXXXXXX"
-                            className="bg-white/5"
-                        />
-                        <p className="text-[10px] text-muted-foreground mt-1 text-emerald-400 font-medium">
-                            Step 2: You will receive an AI voice call 10 seconds after submission to confirm this report.
-                        </p>
-                    </div>
+                    {/* Moved verificationMethod UI block down */}
+
+                    {/* Moved content */}
 
                     <div className="space-y-2">
                         <Label htmlFor="title">Title</Label>
@@ -601,23 +760,171 @@ export function SmartReportForm() {
                         />
                     </div>
 
+                    {/* ══════ Verification Method ══════ */}
+                    <div className="space-y-4 pt-6 border-t border-white/10 mt-6">
+                        <Label className="text-sm font-semibold text-emerald-400 uppercase tracking-wider">
+                            Step 2: Provide Proof & Verify
+                        </Label>
+                        
+                        <div className="grid grid-cols-2 gap-3 h-12">
+                            <button
+                                type="button"
+                                onClick={() => setVerificationMethod('CALL')}
+                                className={cn(
+                                    "flex items-center justify-center gap-2 rounded-xl border transition-all font-medium text-sm",
+                                    verificationMethod === 'CALL' ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/50" : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10"
+                                )}
+                            >
+                                AI Voice Call
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setVerificationMethod('VIDEO')}
+                                className={cn(
+                                    "flex items-center justify-center gap-2 rounded-xl border transition-all font-medium text-sm",
+                                    verificationMethod === 'VIDEO' ? "bg-blue-500/20 text-blue-400 border-blue-500/50" : "bg-white/5 border-white/10 text-gray-400 hover:bg-white/10"
+                                )}
+                            >
+                                <Video className="w-4 h-4" />
+                                Upload Video
+                            </button>
+                        </div>
+
+                        <div className="mt-4 relative overflow-hidden">
+                            {verificationMethod === 'CALL' ? (
+                                <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
+                                    <Label htmlFor="phoneNumber">Phone Number for AI Call</Label>
+                                    <Input
+                                        name="phoneNumber"
+                                        id="phoneNumber"
+                                        type="tel"
+                                        value={phoneNumber}
+                                        onChange={(e) => setPhoneNumber(e.target.value)}
+                                        placeholder="+91XXXXXXXXXX"
+                                        className="bg-white/5"
+                                        required={verificationMethod === 'CALL'}
+                                    />
+                                    <p className="text-[10px] text-muted-foreground mt-1 text-emerald-400 font-medium">
+                                        You will receive an AI voice call 10 seconds after submission to confirm this report.
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="space-y-2 animate-in fade-in zoom-in-95 duration-200">
+                                    <Label htmlFor="video">Upload Verification Video</Label>
+                                    <div
+                                        className={cn(
+                                            "border-2 border-dashed border-white/20 rounded-lg p-6 flex flex-col items-center justify-center transition-colors relative min-h-[140px]",
+                                            isPending ? "opacity-80 cursor-default" : "cursor-pointer hover:bg-white/5"
+                                        )}
+                                        onClick={() => !isPending && videoInputRef.current?.click()}
+                                    >
+                                        {videoPreview ? (
+                                            <div className="w-full text-center">
+                                                <div className="text-emerald-400 text-sm font-bold mb-3 flex items-center justify-center gap-2">
+                                                    <ShieldCheck className="w-4 h-4" /> Video Selected
+                                                </div>
+                                                <div className="relative inline-block mx-auto rounded-lg overflow-hidden border border-white/10 shadow-lg">
+                                                    <video src={videoPreview} className="h-32 object-cover block" controls={!isPending} />
+                                                    {isPending && (
+                                                        <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2 text-white z-10 transition-all">
+                                                            <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+                                                            <span className="text-xs font-bold text-emerald-400 animate-pulse">{Math.round(uploadProgress)}%</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <p className="text-[10px] text-muted-foreground mt-2">
+                                                    {isPending ? 'Uploading to secure server...' : 'Click to replace'}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <Upload className="w-8 h-8 text-muted-foreground mb-2" />
+                                                <span className="text-sm text-foreground/80 font-medium tracking-wide">Click to select video</span>
+                                                <span className="text-xs text-muted-foreground mt-1 text-blue-400">Max size 100MB</span>
+                                            </>
+                                        )}
+                                    </div>
+                                    <input
+                                        type="file"
+                                        name="video"
+                                        id="video"
+                                        ref={videoInputRef}
+                                        className="hidden"
+                                        accept="video/*"
+                                        onChange={handleVideoChange}
+                                        required={verificationMethod === 'VIDEO'}
+                                    />
+                                    <p className="text-[10px] text-muted-foreground mt-1 text-blue-400 font-medium">
+                                        Uploading a video serves as confirmation and bypasses the AI call.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                        <input type="hidden" name="verificationMethod" value={verificationMethod} />
+                    </div>
+
                     <div className="pt-4">
-                        <Button type="submit" className="w-full bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90" disabled={isPending}>
+                        {aiData?.aiVerdict === 'AI_FLAGGED' && (
+                            <div className="mb-4 bg-red-500/10 border border-red-500/20 rounded-xl p-4 flex flex-col items-center justify-center text-center gap-2 animate-in fade-in zoom-in-95 duration-300">
+                                <AlertCircle className="w-8 h-8 text-red-500 mb-1" />
+                                <h3 className="text-sm font-bold text-red-400 uppercase tracking-widest">Submission Blocked</h3>
+                                <p className="text-xs text-red-300/80 font-medium max-w-[90%]">
+                                    Our systems detected that this image is likely AI-generated. To maintain platform integrity, manipulated or synthetic reports are not accepted.
+                                </p>
+                            </div>
+                        )}
+                        <Button 
+                            type="submit" 
+                            className={cn(
+                                "w-full h-14 relative overflow-hidden transition-all font-semibold",
+                                aiData?.aiVerdict === 'AI_FLAGGED' 
+                                    ? "bg-red-950/50 text-red-500/50 cursor-not-allowed border border-red-900/50" 
+                                    : "bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90"
+                            )} 
+                            disabled={isPending || aiData?.aiVerdict === 'AI_FLAGGED'}
+                        >
+                            {isPending && (
+                                <div className="absolute bottom-0 left-0 h-1.5 bg-black/20 w-full overflow-hidden">
+                                     <div 
+                                        className="h-full bg-emerald-400 rounded-r-full shadow-[0_0_10px_rgba(52,211,153,0.8)] transition-all duration-500 ease-out flex items-center justify-end pr-1" 
+                                        style={{ width: `${uploadProgress}%` }}
+                                     >
+                                        <div className="w-1 h-1 bg-white rounded-full animate-pulse opacity-70"></div>
+                                     </div>
+                                </div>
+                            )}
                             {isPending ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Submitting Report...
-                                </>
+                                <div className="flex items-center gap-3">
+                                    <Loader2 className="h-5 w-5 animate-spin text-emerald-200" />
+                                    <span className="text-white">
+                                        {verificationMethod === 'VIDEO' ? 'Uploading Video...' : 'Submitting Report...'} 
+                                        <span className="text-emerald-200 ml-2 font-mono text-xs">{Math.round(uploadProgress)}%</span>
+                                    </span>
+                                </div>
+                            ) : aiData?.aiVerdict === 'AI_FLAGGED' ? (
+                                'Cannot Submit AI Image'
                             ) : (
                                 'Submit Report to Authorities'
                             )}
                         </Button>
                         {/* @ts-ignore - TS might complain about error property on state if types are strict */}
                         {state?.error && (
-                            <p className="text-destructive mt-2 text-sm">
+                            <div className="text-destructive mt-3 text-sm bg-red-500/10 p-4 rounded-xl border border-red-500/20 text-left">
                                 {/* @ts-ignore */}
-                                {typeof state.error === 'string' ? state.error : 'Please check the form fields'}
-                            </p>
+                                {typeof state.error === 'string' ? state.error : (
+                                    <div className="flex flex-col gap-2">
+                                        <span className="font-semibold text-red-500 mb-1 flex items-center gap-2">
+                                            <AlertCircle className="w-4 h-4" /> Please check the following fields:
+                                        </span>
+                                        <ul className="list-disc pl-5 opacity-90 space-y-1">
+                                            {/* @ts-ignore */}
+                                            {Object.entries(state.error).map(([key, val]) => (
+                                                <li key={key} className="text-xs capitalize">{key}: {Array.isArray(val) ? val[0] : 'Invalid'}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </div>
                         )}
                     </div>
                 </form>

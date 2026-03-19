@@ -7,6 +7,8 @@ import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
+import { checkAndEscalate } from '@/app/actions/escalation';
+
 export default async function DashboardPage() {
     const session = await auth();
 
@@ -14,10 +16,14 @@ export default async function DashboardPage() {
         redirect('/admin');
     }
 
+    // Trigger escalation bot
+    await checkAndEscalate();
+
     // Fetch complaints with relations
     const complaints = await prisma.complaint.findMany({
         orderBy: { createdAt: 'desc' },
         include: {
+            department: true,
             votes: true,
             _count: {
                 select: { comments: true }

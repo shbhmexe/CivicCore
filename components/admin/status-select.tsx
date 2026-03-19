@@ -68,7 +68,7 @@ export function StatusSelect({ complaintId, currentStatus }: { complaintId: stri
                             onClick={() => handleChange(option.value)}
                             className={cn(
                                 "w-full text-left px-4 py-2.5 text-xs font-semibold hover:bg-white/5 transition-colors flex items-center justify-between gap-2",
-                                status === option.value ? "text-white bg-white/5" : "text-gray-400"
+                                status === option.value ? "text-white bg-white/5" : "text-gray-300"
                             )}
                         >
                             <div className="flex items-center gap-2">

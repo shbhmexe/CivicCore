@@ -4,15 +4,22 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, PlusCircle, Home, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Home, ClipboardList, Activity } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSession, signOut } from 'next-auth/react';
 
-const navItems = [
+const citizenNavItems = [
     { name: 'Home', href: '/', icon: Home },
+    { name: 'Live Feed', href: '/feed', icon: Activity },
     { name: 'Report Issue', href: '/report', icon: PlusCircle },
     { name: 'My Reports', href: '/my-reports', icon: ClipboardList },
     { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+];
+
+const adminNavItems = [
+    { name: 'Admin Hub', href: '/admin', icon: LayoutDashboard },
+    { name: 'Live Feed', href: '/feed', icon: Activity },
+    { name: 'System Overview', href: '/admin', icon: Home },
 ];
 
 export function Navbar() {
@@ -59,41 +66,22 @@ export function Navbar() {
                 </Link>
 
                 <div className="hidden md:flex items-center gap-6 text-[13px] font-medium tracking-wide">
-                    {navItems
-                        .filter(item => {
-                            // Hide citizen-specific nav items for admin
-                            if (session?.user?.role === 'ADMIN' &&
-                                (item.name === 'Report Issue' || item.name === 'Dashboard' || item.name === 'My Reports')) return false;
-                            return true;
-                        })
-                        .map(item => {
-                            const isActive = pathname === item.href;
-                            return (
-                                <Link
-                                    key={item.name}
-                                    href={item.href}
-                                    className={cn(
-                                        "relative transition-colors flex items-center gap-2",
-                                        isActive ? "text-white font-bold" : "text-blue-200 hover:text-white"
-                                    )}
-                                >
-                                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-300"></span>}
-                                    {item.name}
-                                </Link>
-                            );
-                        })}
-
-                    {session?.user?.role === 'ADMIN' && (
-                        <Link
-                            href="/admin"
-                            className={cn(
-                                "transition-colors flex items-center gap-2",
-                                pathname === '/admin' ? "text-white font-bold" : "text-blue-200 hover:text-white"
-                            )}
-                        >
-                            Admin Center
-                        </Link>
-                    )}
+                    {(session?.user?.role === 'ADMIN' ? adminNavItems : citizenNavItems).map(item => {
+                        const isActive = pathname === item.href;
+                        return (
+                            <Link
+                                key={item.name}
+                                href={item.href}
+                                className={cn(
+                                    "relative transition-colors flex items-center gap-2",
+                                    isActive ? "text-white font-bold" : "text-blue-200 hover:text-white"
+                                )}
+                            >
+                                {isActive && <span className="w-1.5 h-1.5 rounded-full bg-blue-300"></span>}
+                                {item.name}
+                            </Link>
+                        );
+                    })}
                 </div>
 
                 <div className="flex items-center gap-3 ml-auto">
