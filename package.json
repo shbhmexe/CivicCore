@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "npx tsx server.ts",
     "build": "prisma generate && next build",
-    "start": "next start",
+    "start": "npx tsx server.ts",
     "lint": "eslint"
   },
   "dependencies": {
