@@ -108,9 +108,26 @@ export async function sendManualEscalationAction(id: string, authorityDetails: s
  */
 export async function toggleEscalationPauseAction(id: string, paused: boolean) {
     try {
+        const complaint = await (prisma as any).complaint.findUnique({ where: { id }});
+        if (!complaint) return { success: false, error: 'Not found' };
+        
+        const now = new Date();
+        const data: any = { escalationPaused: paused };
+        
+        if (paused) {
+             data.escalationPausedAt = now;
+        } else {
+             // Resuming
+             if (complaint.escalationPausedAt) {
+                  const diffMs = now.getTime() - new Date(complaint.escalationPausedAt).getTime();
+                  data.escalatedPauseAccumulated = (complaint.escalatedPauseAccumulated || 0) + diffMs;
+             }
+             data.escalationPausedAt = null;
+        }
+
         await (prisma as any).complaint.update({
             where: { id },
-            data: { escalationPaused: paused }
+            data
         });
         
         revalidatePath('/admin');

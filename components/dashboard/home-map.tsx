@@ -17,6 +17,6 @@ const LazyMap = dynamic<any>(() => import('./home-map-inner'), {
     ),
 });
 
-export function HomeMap() {
-    return <LazyMap />;
+export function HomeMap({ points }: { points?: any[] }) {
+    return <LazyMap points={points} />;
 }

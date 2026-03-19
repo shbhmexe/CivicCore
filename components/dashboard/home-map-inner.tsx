@@ -40,7 +40,7 @@ function createHomeMarker(color: string) {
     });
 }
 
-export default function HomeMapInner() {
+export default function HomeMapInner({ points }: { points?: any[] }) {
     const mapRef = useRef<HTMLDivElement>(null);
     const leafletMap = useRef<L.Map | null>(null);
 
@@ -63,8 +63,10 @@ export default function HomeMapInner() {
             maxZoom: 19,
         }).addTo(map);
 
+        const activePoints = points && points.length > 0 ? points : SAMPLE_POINTS;
+
         // Add stylized markers
-        SAMPLE_POINTS.forEach((point) => {
+        activePoints.forEach((point) => {
             const color = point.type === 'high' ? '#f97316' : point.type === 'med' ? '#3b82f6' : '#14b8a6';
             const icon = createHomeMarker(color);
             
@@ -103,7 +105,7 @@ export default function HomeMapInner() {
             map.remove();
             leafletMap.current = null;
         };
-    }, []);
+    }, [points]);
 
     return (
         <Card className="relative w-full h-[500px] overflow-hidden rounded-[2.5rem] border border-gray-100 bg-white shadow-2xl group hover:shadow-orange-500/5 transition-all duration-700">

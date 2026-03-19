@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import exifr from 'exif-js';
 import { Loader2, Brain, Sparkles, AlertCircle, RefreshCcw, Handshake, CheckCircle2, ShieldAlert, Fingerprint, Eye, BarChart3, Upload, ShieldCheck, Video, MapPin, Search, Mic, Square, Navigation, Navigation2, Crosshair, Layers, Building2, Wand2 } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { VoiceConfirmation } from '@/components/report/voice-confirmation';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -373,9 +374,9 @@ export function SmartReportForm() {
                              You have been awarded Karma points for your contribution!
                          </p>
                          <div className="flex flex-col items-center justify-center pt-8 gap-3">
-                             <Button onClick={() => router.push(`/complaints/${submittedData.complaintId}`)} className="bg-blue-600 hover:bg-blue-500 px-8 py-6 text-md font-bold text-white rounded-xl shadow-lg shadow-blue-500/20">
+                             <Link href={`/complaints/${submittedData.complaintId}`} className="bg-blue-600 hover:bg-blue-500 px-8 py-6 text-md font-bold text-white rounded-xl shadow-lg shadow-blue-500/20 inline-flex items-center justify-center transition-colors">
                                  View Original Issue
-                             </Button>
+                             </Link>
                          </div>
                      </CardContent>
                  </Card>

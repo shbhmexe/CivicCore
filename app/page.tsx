@@ -5,11 +5,39 @@ import Link from 'next/link';
 import { MapPin, AlertTriangle, Lightbulb, Droplet, Menu, ShieldCheck, PlusCircle, User } from 'lucide-react';
 import { useSession, signOut } from 'next-auth/react';
 import { HomeMap } from '@/components/dashboard/home-map';
+import { getHomepageStats } from '@/app/actions/stats';
 
 export default function Home() {
   const { data: session, status } = useSession();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  const [stats, setStats] = useState({
+    total: 0,
+    inProgress: 0,
+    resolved: 0,
+    mapPoints: [] as any[],
+    loading: true
+  });
+
+  useEffect(() => {
+    getHomepageStats().then(res => {
+        if (res.success) {
+            setStats({
+                total: res.total || 0,
+                inProgress: res.inProgress || 0,
+                resolved: res.resolved || 0,
+                mapPoints: res.mapPoints || [],
+                loading: false
+            });
+        } else {
+            setStats(prev => ({ ...prev, loading: false }));
+        }
+    }).catch(err => {
+        console.error(err);
+        setStats(prev => ({ ...prev, loading: false }));
+    });
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -193,15 +221,21 @@ export default function Home() {
             {/* Stats Row */}
             <div className="grid grid-cols-1 md:grid-cols-4 items-center justify-between mb-12 gap-8 px-4">
                 <div className="text-center md:border-r border-gray-200 px-4">
-                    <div className="text-5xl font-extrabold text-[#1e293b] mb-2 tracking-tight">5,280</div>
+                    <div className="text-5xl font-extrabold text-[#1e293b] mb-2 tracking-tight">
+                        {stats.loading ? '...' : (stats.total > 5000 ? stats.total.toLocaleString() : stats.total)}
+                    </div>
                     <div className="text-sm text-gray-400 font-bold tracking-widest uppercase">Issues Reported</div>
                 </div>
                 <div className="text-center md:border-r border-gray-200 px-4">
-                    <div className="text-5xl font-extrabold text-[#1e293b] mb-2 tracking-tight">832</div>
+                    <div className="text-5xl font-extrabold text-[#1e293b] mb-2 tracking-tight">
+                        {stats.loading ? '...' : (stats.inProgress > 800 ? stats.inProgress.toLocaleString() : stats.inProgress)}
+                    </div>
                     <div className="text-sm text-gray-400 font-bold tracking-widest uppercase">In Progress</div>
                 </div>
                 <div className="text-center md:border-r border-gray-200 px-4">
-                    <div className="text-5xl font-extrabold text-[#1e293b] mb-2 tracking-tight">4,150</div>
+                    <div className="text-5xl font-extrabold text-[#1e293b] mb-2 tracking-tight">
+                        {stats.loading ? '...' : (stats.resolved > 4000 ? stats.resolved.toLocaleString() : stats.resolved)}
+                    </div>
                     <div className="text-sm text-gray-400 font-bold tracking-widest uppercase">Resolved</div>
                 </div>
                 <div className="flex justify-center md:justify-end pr-4">
@@ -215,7 +249,7 @@ export default function Home() {
 
             {/* Interactive India Map Section */}
             <div className="mb-16">
-                <HomeMap />
+                <HomeMap points={stats.mapPoints} />
             </div>
 
             {/* Bottom 2 Cards Grid */}

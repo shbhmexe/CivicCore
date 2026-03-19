@@ -47,8 +47,12 @@ interface Complaint {
     escalatedAt: string | null;
     escalationEmailSent: boolean;
     escalationPaused: boolean;
+    escalationPausedAt: string | null;
+    escalatedPauseAccumulated: number;
     user: ComplaintUser;
 }
+
+
 
 type FilterType = 'ALL' | 'PENDING' | 'ACTIVE' | 'RESOLVED' | 'REJECTED';
 
@@ -326,40 +330,52 @@ function StatCard({ label, value, icon: Icon, gradient, active, onClick }: any) 
     );
 }
 
-function EscalationCountdown({ createdAt, paused, isEscalated }: { createdAt: string, paused?: boolean, isEscalated?: boolean }) {
+function EscalationCountdown({ createdAt, paused, isEscalated, pausedAt, pauseAccumulated }: { createdAt: string, paused?: boolean, isEscalated?: boolean, pausedAt?: string | null, pauseAccumulated?: number }) {
     const [timeLeft, setTimeLeft] = useState<string>('');
     const [isUrgent, setIsUrgent] = useState(false);
 
     useEffect(() => {
-        if (paused) {
-            setTimeLeft('Escalation Paused');
-            setIsUrgent(false);
-            return;
-        }
-
         const calculateTime = () => {
-            const createdDate = new Date(createdAt);
-            const now = new Date();
-            const thresholdInMs = 5 * 60 * 1000; // 5 minutes
-            const diff = thresholdInMs - (now.getTime() - createdDate.getTime());
+            const now = new Date().getTime();
+            const created = new Date(createdAt).getTime();
+            let accumulated = pauseAccumulated || 0;
 
-            if (diff <= 0) {
-                setTimeLeft('Escalating now...');
-                setIsUrgent(true);
-                return;
+            if (paused && pausedAt) {
+                accumulated += (now - new Date(pausedAt).getTime());
             }
 
-            const minutes = Math.floor(diff / 60000);
-            const seconds = Math.floor((diff % 60000) / 1000);
-            
-            if (minutes === 0) setIsUrgent(true);
-            setTimeLeft(`AI Escalation in ${minutes}:${seconds.toString().padStart(2, '0')}`);
+            const effectiveAgeMs = now - created - accumulated;
+            const thresholdInMs = 5 * 60 * 1000; // 5 minutes
+            const diff = thresholdInMs - effectiveAgeMs;
+
+            if (paused) {
+                const minutes = Math.floor(Math.max(0, diff) / 60000);
+                const seconds = Math.floor((Math.max(0, diff) % 60000) / 1000);
+                setTimeLeft(`Paused at ${minutes}:${seconds.toString().padStart(2, '0')}`);
+                setIsUrgent(false);
+            } else {
+                if (diff <= 0) {
+                    setTimeLeft('Escalating now...');
+                    setIsUrgent(true);
+                    return;
+                }
+
+                const minutes = Math.floor(diff / 60000);
+                const seconds = Math.floor((diff % 60000) / 1000);
+                
+                if (minutes === 0) setIsUrgent(true);
+                else setIsUrgent(false);
+                
+                setTimeLeft(`AI Escalation in ${minutes}:${seconds.toString().padStart(2, '0')}`);
+            }
         };
 
         calculateTime();
+        if (paused) return;
+        
         const timer = setInterval(calculateTime, 1000);
         return () => clearInterval(timer);
-    }, [createdAt, paused, isEscalated]);
+    }, [createdAt, paused, isEscalated, pausedAt, pauseAccumulated]);
 
     if (isEscalated) {
         return (

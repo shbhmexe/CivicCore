@@ -103,6 +103,8 @@ model Complaint {
   confidenceScore    Float     @default(0)
   escalationEmailSent Boolean  @default(false)
   escalationPaused   Boolean  @default(false)
+  escalationPausedAt DateTime?
+  escalatedPauseAccumulated Int @default(0)
   customEscalationEmail String?
   customEscalationAuthority String?
   

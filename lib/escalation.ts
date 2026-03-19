@@ -56,17 +56,12 @@ async function getAuthorityFromCoordinates(lat: number, lng: number, departmentN
  */
 export async function runEscalationCycle(onEscalate?: (complaint: any) => void) {
     try {
-        const fiveMinutesAgo = new Date();
-        fiveMinutesAgo.setMinutes(fiveMinutesAgo.getMinutes() - 5);
-
-        // Find all complaints that are not resolved and older than 5 minutes
-        const overdueComplaints = await (prisma as any).complaint.findMany({
+        // We cannot blindly check `createdAt < 5 mins ago` anymore because of accumulated pause delays.
+        // We find all un-escalated, un-paused complaints, then check their mathematical effective age.
+        const candidates = await (prisma as any).complaint.findMany({
             where: {
                 status: {
                     in: ['PENDING', 'ASSIGNED', 'IN_PROGRESS']
-                },
-                createdAt: {
-                    lt: fiveMinutesAgo
                 },
                 isEscalated: false,
                 escalationEmailSent: false,
@@ -75,6 +70,13 @@ export async function runEscalationCycle(onEscalate?: (complaint: any) => void) 
             include: {
                 department: true
             }
+        });
+
+        const now = new Date().getTime();
+        const overdueComplaints = candidates.filter((c: any) => {
+             const trueAgeMs = now - c.createdAt.getTime();
+             const effectiveAgeMs = trueAgeMs - (c.escalatedPauseAccumulated || 0);
+             return effectiveAgeMs >= 5 * 60 * 1000;
         });
 
         if (overdueComplaints.length === 0) {
